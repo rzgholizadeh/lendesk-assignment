@@ -4,10 +4,11 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "docker:build": "docker compose up --build -d",
     "start": "node dist/index.js",
-    "dev": "docker compose up -d",
-    "stop": "docker compose down",
+    "dev:build": "docker compose up --build -d",
+    "dev:start": "docker compose up -d",
+    "dev:stop": "docker compose down",
+    "dev:clean": "docker compose down && docker rmi lendesk-backend redis:8-alpine",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -15,11 +16,13 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "redis": "^4.7.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
     "@types/node": "^24.3.0",
+    "@types/redis": "^4.0.10",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.2"
   }

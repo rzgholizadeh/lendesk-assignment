@@ -1,7 +1,21 @@
 version: '3.8'
 
 services:
+  redis:
+    image: redis:8-alpine
+    container_name: lendesk-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   backend:
+    container_name: lendesk-backend
+    image: lendesk-backend
     build: .
     ports:
       - "3000:3000"
@@ -10,4 +24,8 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=development
+      - REDIS_URL=redis://redis:6379
     command: npx ts-node src/index.ts
+    depends_on:
+      redis:
+        condition: service_healthy

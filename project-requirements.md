@@ -5,6 +5,7 @@ This document provides a detailed breakdown of the requirements and how they are
 ---
 
 ## Functional Requirements
+
 - **Register new user accounts** with a unique username and password.
 - **Authenticate users** with username and password at a separate endpoint.
 - Return **200 OK** on success and **401 Unauthorized** for failed authentication.
@@ -17,6 +18,7 @@ This document provides a detailed breakdown of the requirements and how they are
 ---
 
 ## Iteration 1 — Minimal Functional System (MVP)
+
 - Registration endpoint to create new users:
   - Enforce unique usernames.
   - Hash passwords before storing in Redis.
@@ -33,6 +35,7 @@ This document provides a detailed breakdown of the requirements and how they are
   - Proper JSON error responses.
 
 **Questions answered in this milestone:**
+
 - How are unique usernames enforced?
 - How is a password stored securely?
 - What is the minimal Redis schema required to support registration and authentication?
@@ -41,6 +44,7 @@ This document provides a detailed breakdown of the requirements and how they are
 ---
 
 ## Iteration 2 — Security and Robustness
+
 - Password complexity validation (length, characters, etc.).
 - Input validation for request payloads (username normalization, password requirements).
 - Rate limiting on login attempts (per-username and per-IP).
@@ -53,6 +57,7 @@ This document provides a detailed breakdown of the requirements and how they are
   - Logging of events.
 
 **Questions answered in this milestone:**
+
 - What rules define a "secure" password?
 - How is brute force prevented?
 - How do we expire sessions/tokens safely?
@@ -62,6 +67,7 @@ This document provides a detailed breakdown of the requirements and how they are
 ---
 
 ## Iteration 3 — Production Readiness and Extensibility
+
 - Logout endpoint to allow session or token revocation.
 - Token revocation or blacklist mechanism stored in Redis.
 - More comprehensive error handling and structured logging for observability.
@@ -80,6 +86,7 @@ This document provides a detailed breakdown of the requirements and how they are
   - Observability improvements (logs, audit trails).
 
 **Questions answered in this milestone:**
+
 - How can users end their sessions securely?
 - How do we handle token/session revocation?
 - What system improvements make this API closer to production-ready?

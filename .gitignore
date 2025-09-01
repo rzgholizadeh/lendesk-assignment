@@ -1,4 +1,24 @@
+# Dependencies
 node_modules/
+
+# Build artifacts
+dist/
+
+# Logs
 *.log
+
+# Environment variables
 .env
+.env.*
+!.env.example
+
+# OS-specific files
 .DS_Store
+.DS_Store?
+._*
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/

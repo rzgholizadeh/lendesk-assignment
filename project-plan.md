@@ -5,6 +5,7 @@ This document outlines the three planned iterations for developing the authentic
 ---
 
 ## Iteration 1 — Minimal Functional System (MVP)
+
 **Goal:** Deliver a working authentication API that meets the fundamental functional requirements.
 
 - Implement user registration with unique username enforcement.
@@ -18,6 +19,7 @@ This document outlines the three planned iterations for developing the authentic
 ---
 
 ## Iteration 2 — Security and Robustness
+
 **Goal:** Strengthen the system against misuse and prepare it to pass a basic security audit.
 
 - Enforce password complexity requirements.
@@ -30,6 +32,7 @@ This document outlines the three planned iterations for developing the authentic
 ---
 
 ## Iteration 3 — Production Readiness and Extensibility
+
 **Goal:** Improve production quality and prepare for future extensions.
 
 - Support logout and token/session revocation.

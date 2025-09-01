@@ -35,7 +35,7 @@ describe('Redis Client', () => {
     mockLogger = require('../../../middleware/logger').logger;
     mockLogger.info.mockClear();
     mockLogger.error.mockClear();
-    
+
     processExitSpy = jest.spyOn(process, 'exit').mockImplementation();
 
     const clientModule = require('../client');

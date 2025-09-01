@@ -28,6 +28,7 @@
 3. **Missing Validation Middleware**: No `express-validator` (though Zod covers it)
 
 **Recent Additions Analysis:**
+
 - `@testcontainers/redis: "^11.5.1"` - Excellent for integration testing
 - `eslint-config-prettier: "^10.1.8"` - Proper ESLint-Prettier integration
 - `@typescript-eslint/*: "^8.41.0"` - Modern TypeScript ESLint setup
@@ -86,12 +87,12 @@ projects: [
     testEnvironment: 'node',
   },
   {
-    displayName: 'integration', 
+    displayName: 'integration',
     testMatch: ['<rootDir>/test/integration/**/*.test.ts'],
     globalSetup: '<rootDir>/test/integration/helpers/setup.ts',
     globalTeardown: '<rootDir>/test/integration/helpers/teardown.ts',
-  }
-]
+  },
+];
 ```
 
 **Strengths:**
@@ -135,7 +136,7 @@ export default [
     files: ['**/*.ts', '**/*.tsx'],
     languageOptions: { parser: tsParser },
     plugins: { '@typescript-eslint': tseslint },
-    rules: { ...tseslint.configs.recommended.rules }
+    rules: { ...tseslint.configs.recommended.rules },
   },
   prettierConfig, // Proper integration
 ];
@@ -151,6 +152,7 @@ export default [
 - Appropriate rule overrides (allows console.log, requires in tests)
 
 **Excellent Test Configuration:**
+
 - Separate globals for Jest environment
 - Proper Node.js globals for config files
 
@@ -169,7 +171,7 @@ Could add custom rules for domain-specific patterns, but current setup is produc
 ```json
 {
   "semi": true,
-  "trailingComma": "es5", 
+  "trailingComma": "es5",
   "singleQuote": true,
   "printWidth": 80,
   "tabWidth": 2,
@@ -278,7 +280,9 @@ const authService = new AuthService(authRepository);
 const app = createApp({ authService });
 
 // ✅ Excellent structured logging
-logger.info(`HTTP server started on port ${config.port} (env: ${config.environment})`);
+logger.info(
+  `HTTP server started on port ${config.port} (env: ${config.environment})`
+);
 
 // ✅ Comprehensive error handling with context
 process.on('uncaughtException', (err) => {
@@ -299,7 +303,9 @@ const shutdown = async (signal: string) => {
     await disconnectFromRedis();
     logger.info('Shutdown complete');
   } catch (err) {
-    logger.error('Shutdown error:', { error: err instanceof Error ? err.message : String(err) });
+    logger.error('Shutdown error:', {
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 };
 ```
@@ -337,7 +343,7 @@ export const createApp = (dependencies: AppDependencies): Application => {
   // ✅ Security middleware
   app.use(helmet());
   app.use(express.json());
-  
+
   // ✅ NEW: JSON error handling
   app.use(jsonErrorHandler);
 
@@ -390,7 +396,11 @@ app.use(globalErrorHandler);
 
 ```typescript
 class Logger {
-  private formatLogEntry(level: LogLevel, message: string, metadata?: Record<string, unknown>): LogEntry {
+  private formatLogEntry(
+    level: LogLevel,
+    message: string,
+    metadata?: Record<string, unknown>
+  ): LogEntry {
     return {
       level,
       message,
@@ -401,8 +411,8 @@ class Logger {
 
   private logToConsole(entry: LogEntry): void {
     const logMessage = `[${entry.timestamp}] ${entry.level}: ${entry.message}`;
-    const fullMessage = entry.metadata 
-      ? `${logMessage} ${JSON.stringify(entry.metadata)}` 
+    const fullMessage = entry.metadata
+      ? `${logMessage} ${JSON.stringify(entry.metadata)}`
       : logMessage;
     console.log(fullMessage);
   }
@@ -430,7 +440,7 @@ class Logger {
 
 ```typescript
 // ❌ All levels use console.log
-console.log(fullMessage); 
+console.log(fullMessage);
 
 // ✅ Should differentiate:
 if (entry.level === LogLevel.ERROR || entry.level === LogLevel.WARN) {
@@ -445,12 +455,17 @@ if (entry.level === LogLevel.ERROR || entry.level === LogLevel.WARN) {
 ```typescript
 class Logger {
   constructor(private readonly minLevel: LogLevel = LogLevel.INFO) {}
-  
+
   private shouldLog(level: LogLevel): boolean {
-    const levels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR];
+    const levels = [
+      LogLevel.DEBUG,
+      LogLevel.INFO,
+      LogLevel.WARN,
+      LogLevel.ERROR,
+    ];
     return levels.indexOf(level) >= levels.indexOf(this.minLevel);
   }
-  
+
   error(message: string, metadata?: Record<string, unknown>): void {
     if (!this.shouldLog(LogLevel.ERROR)) return;
     const entry = this.formatLogEntry(LogLevel.ERROR, message, metadata);
@@ -708,12 +723,16 @@ export const healthCheckHandler = (req: Request, res: Response): void => {
 ```typescript
 export class AuthService implements IAuthService {
   private readonly saltRounds = 12; // NOTE: needs env configuration
-  
+
   constructor(private readonly authRepository: IAuthRepository) {}
-  
-  async registerUser(userData: RegisterRequest): Promise<AuthServiceResult<RegisterResult>> {
+
+  async registerUser(
+    userData: RegisterRequest
+  ): Promise<AuthServiceResult<RegisterResult>> {
     try {
-      const userExists = await this.authRepository.userExists(userData.username);
+      const userExists = await this.authRepository.userExists(
+        userData.username
+      );
       if (userExists) {
         return { success: false, error: 'Username already exists' };
       }
@@ -750,17 +769,24 @@ export class AuthService implements IAuthService {
     private readonly config: { bcryptSaltRounds: number }
   ) {}
 
-  async registerUser(userData: RegisterRequest): Promise<AuthServiceResult<RegisterResult>> {
+  async registerUser(
+    userData: RegisterRequest
+  ): Promise<AuthServiceResult<RegisterResult>> {
     try {
-      const userExists = await this.authRepository.userExists(userData.username);
+      const userExists = await this.authRepository.userExists(
+        userData.username
+      );
       if (userExists) {
-        this.logger.warn('Registration attempt with existing username', { 
-          username: userData.username 
+        this.logger.warn('Registration attempt with existing username', {
+          username: userData.username,
         });
         return { success: false, error: 'Username already exists' };
       }
-      
-      const passwordHash = await bcrypt.hash(userData.password, this.config.bcryptSaltRounds);
+
+      const passwordHash = await bcrypt.hash(
+        userData.password,
+        this.config.bcryptSaltRounds
+      );
       // ... continue implementation
     } catch (error) {
       this.logger.error('Registration failed', {
@@ -845,11 +871,13 @@ if (!results || results.some(([err]) => err)) {
 export class AuthRepository implements IAuthRepository {
   constructor(private readonly redisClient: RedisClientType) {}
 
-  async createUser(userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User> {
+  async createUser(
+    userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<User> {
     const id = uuidv4();
     const now = new Date();
     const user: User = { id, ...userData, createdAt: now, updatedAt: now };
-    
+
     const storedUser = {
       ...user,
       createdAt: now.toISOString(),
@@ -869,7 +897,9 @@ export class AuthRepository implements IAuthRepository {
 
       return user;
     } catch (error) {
-      throw new Error(`User creation failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `User creation failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 }
@@ -918,9 +948,7 @@ export const registerSchema = z.object({
     .string()
     .min(3, 'Username must be at least 3 characters')
     .max(50, 'Username too long'),
-  password: z
-    .string()
-    .min(8, 'Password must be at least 8 characters'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
 });
 ```
 
@@ -938,7 +966,10 @@ export const registerSchema = z.object({
     .string()
     .min(3, 'Username must be at least 3 characters')
     .max(30, 'Username too long')
-    .regex(/^[a-zA-Z0-9_-]+$/, 'Username can only contain letters, numbers, underscore, and dash'),
+    .regex(
+      /^[a-zA-Z0-9_-]+$/,
+      'Username can only contain letters, numbers, underscore, and dash'
+    ),
   password: z
     .string()
     .min(8, 'Password must be at least 8 characters')
@@ -1030,23 +1061,23 @@ export const connectToRedis = async (retries = 3): Promise<void> => {
     try {
       await redisClient.connect();
       logger.info('Connected to Redis successfully');
-      
+
       // Add connection event listeners
       redisClient.on('error', (error) => {
         logger.error('Redis connection error:', { error: error.message });
       });
-      
+
       return;
     } catch (error) {
       logger.warn(`Redis connection attempt ${attempt}/${retries} failed`, {
         error: error instanceof Error ? error.message : String(error),
       });
-      
+
       if (attempt === retries) {
         throw new Error(`Failed to connect to Redis after ${retries} attempts`);
       }
-      
-      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+
+      await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
     }
   }
 };
@@ -1126,7 +1157,7 @@ it('should complete register -> login workflow', async () => {
 
   // Step 2: Login
   const loginResponse = await request(app)
-    .post('/api/v1/auth/login')  
+    .post('/api/v1/auth/login')
     .send(userData)
     .expect(200);
 
@@ -1186,7 +1217,7 @@ export const createTestApp = (redisClient: RedisClientType): TestAppSetup => {
   const authRepository = new AuthRepository(redisClient);
   const authService = new AuthService(authRepository);
   const app = createApp({ authService });
-  
+
   return { app, authService, authRepository };
 };
 
@@ -1195,11 +1226,11 @@ export const createTestUser = async (
   userData: { username: string; password: string }
 ) => {
   const passwordHash = await bcrypt.hash(userData.password, 10);
-  const user = await authRepository.createUser({ 
-    username: userData.username, 
-    passwordHash 
+  const user = await authRepository.createUser({
+    username: userData.username,
+    passwordHash,
   });
-  
+
   return { ...user, plainPassword: userData.password };
 };
 ```
@@ -1243,7 +1274,7 @@ export const createTestUser = async (
 **Outstanding Achievements:**
 
 1. **Multi-Layer Testing**: Unit, integration, and system tests
-2. **Real Infrastructure**: TestContainers for production-like testing  
+2. **Real Infrastructure**: TestContainers for production-like testing
 3. **Comprehensive Coverage**: Full user workflows and error scenarios
 4. **Clean Architecture**: Proper separation of unit vs integration tests
 5. **Modern Tools**: Jest, Supertest, TestContainers, TypeScript
@@ -1254,45 +1285,45 @@ export const createTestUser = async (
 
 ## FINAL SUMMARY BY FILE QUALITY
 
-| File                                        | Previous Grade | Current Grade | Status                    | Priority |
-| ------------------------------------------- | -------------- | ------------- | ------------------------- | -------- |
-| **Configuration & Build**                   |                |               |                           |          |
-| `package.json`                              | B+             | **A-**        | ✅ Major Improvements     | Complete |
-| `tsconfig.json`                             | A-             | **A-**        | → Maintained              | Complete |
-| `jest.config.js`                            | B+             | **A-**        | ✅ Multi-project setup    | Complete |
-| **NEW:** `eslint.config.js`                 | N/A            | **A-**        | 🆕 Modern flat config     | Complete |
-| **NEW:** `.prettierrc`                      | N/A            | **A**         | 🆕 Perfect setup          | Complete |
-| `.gitignore`                                | A-             | **A-**        | → Maintained              | Complete |
-| `Dockerfile`                                | C+             | **C+**        | → Same (needs security)   | Medium   |
-| `docker-compose.yml`                        | B              | **B**         | → Same                    | Low      |
-|                                             |                |               |                           |          |
-| **Application Core**                        |                |               |                           |          |
-| `src/index.ts`                              | A-             | **A**         | ✅ Perfected with logger  | Complete |
-| `src/server.ts`                             | B+             | **A-**        | ⬆️ Added error handling   | Complete |
-| `src/config/index.ts`                       | B+             | **B+**        | → Maintained              | Low      |
-|                                             |                |               |                           |          |
-| **Middleware Layer**                        |                |               |                           |          |
-| **NEW:** `src/middleware/logger.ts`         | N/A            | **B+**        | 🆕 Structured logging     | Medium   |
-| **NEW:** `src/middleware/jsonErrorHandler.ts` | N/A          | **A-**        | 🆕 Perfect implementation | Complete |
-| `src/middleware/health.ts`                  | A-             | **A-**        | → Maintained              | Complete |
-|                                             |                |               |                           |          |
-| **Authentication Module**                   |                |               |                           |          |
-| `src/api/auth/auth.controller.ts`           | B+             | **B+**        | → Maintained              | Low      |
-| `src/api/auth/auth.service.ts`              | B-             | **B**         | ⬆️ Slight improvement     | Medium   |
-| `src/api/auth/auth.repository.ts`           | C-             | **B-**        | ✅ Major type improvements| Medium   |
-| `src/api/auth/auth.schema.ts`               | A-             | **A-**        | → Maintained              | Complete |
-| `src/api/auth/auth.model.ts`                | B+             | **B+**        | → Maintained              | Complete |
-| `src/api/index.ts`                          | A-             | **A-**        | → Maintained              | Complete |
-|                                             |                |               |                           |          |
-| **Infrastructure**                          |                |               |                           |          |
-| `src/infra/redis/client.ts`                | C+             | **B+**        | ✅ Structured logging     | Medium   |
-|                                             |                |               |                           |          |
-| **Testing Infrastructure**                  |                |               |                           |          |
-| `src/__tests__/server.test.ts`             | A-             | **A-**        | → Maintained              | Complete |
-| **NEW:** `test/integration/server.int.test.ts` | N/A        | **A**         | 🆕 Outstanding integration| Complete |
-| **NEW:** `test/integration/helpers/setup.ts` | N/A          | **A**         | 🆕 Perfect test infra     | Complete |
-| **NEW:** `test/integration/helpers/utils.ts` | N/A          | **A-**        | 🆕 Excellent utilities    | Complete |
-| Unit test files (`**/*.test.ts`)            | B+             | **B+**        | → Maintained quality      | Complete |
+| File                                           | Previous Grade | Current Grade | Status                     | Priority |
+| ---------------------------------------------- | -------------- | ------------- | -------------------------- | -------- |
+| **Configuration & Build**                      |                |               |                            |          |
+| `package.json`                                 | B+             | **A-**        | ✅ Major Improvements      | Complete |
+| `tsconfig.json`                                | A-             | **A-**        | → Maintained               | Complete |
+| `jest.config.js`                               | B+             | **A-**        | ✅ Multi-project setup     | Complete |
+| **NEW:** `eslint.config.js`                    | N/A            | **A-**        | 🆕 Modern flat config      | Complete |
+| **NEW:** `.prettierrc`                         | N/A            | **A**         | 🆕 Perfect setup           | Complete |
+| `.gitignore`                                   | A-             | **A-**        | → Maintained               | Complete |
+| `Dockerfile`                                   | C+             | **C+**        | → Same (needs security)    | Medium   |
+| `docker-compose.yml`                           | B              | **B**         | → Same                     | Low      |
+|                                                |                |               |                            |          |
+| **Application Core**                           |                |               |                            |          |
+| `src/index.ts`                                 | A-             | **A**         | ✅ Perfected with logger   | Complete |
+| `src/server.ts`                                | B+             | **A-**        | ⬆️ Added error handling    | Complete |
+| `src/config/index.ts`                          | B+             | **B+**        | → Maintained               | Low      |
+|                                                |                |               |                            |          |
+| **Middleware Layer**                           |                |               |                            |          |
+| **NEW:** `src/middleware/logger.ts`            | N/A            | **B+**        | 🆕 Structured logging      | Medium   |
+| **NEW:** `src/middleware/jsonErrorHandler.ts`  | N/A            | **A-**        | 🆕 Perfect implementation  | Complete |
+| `src/middleware/health.ts`                     | A-             | **A-**        | → Maintained               | Complete |
+|                                                |                |               |                            |          |
+| **Authentication Module**                      |                |               |                            |          |
+| `src/api/auth/auth.controller.ts`              | B+             | **B+**        | → Maintained               | Low      |
+| `src/api/auth/auth.service.ts`                 | B-             | **B**         | ⬆️ Slight improvement      | Medium   |
+| `src/api/auth/auth.repository.ts`              | C-             | **B-**        | ✅ Major type improvements | Medium   |
+| `src/api/auth/auth.schema.ts`                  | A-             | **A-**        | → Maintained               | Complete |
+| `src/api/auth/auth.model.ts`                   | B+             | **B+**        | → Maintained               | Complete |
+| `src/api/index.ts`                             | A-             | **A-**        | → Maintained               | Complete |
+|                                                |                |               |                            |          |
+| **Infrastructure**                             |                |               |                            |          |
+| `src/infra/redis/client.ts`                    | C+             | **B+**        | ✅ Structured logging      | Medium   |
+|                                                |                |               |                            |          |
+| **Testing Infrastructure**                     |                |               |                            |          |
+| `src/__tests__/server.test.ts`                 | A-             | **A-**        | → Maintained               | Complete |
+| **NEW:** `test/integration/server.int.test.ts` | N/A            | **A**         | 🆕 Outstanding integration | Complete |
+| **NEW:** `test/integration/helpers/setup.ts`   | N/A            | **A**         | 🆕 Perfect test infra      | Complete |
+| **NEW:** `test/integration/helpers/utils.ts`   | N/A            | **A-**        | 🆕 Excellent utilities     | Complete |
+| Unit test files (`**/*.test.ts`)               | B+             | **B+**        | → Maintained quality       | Complete |
 
 ---
 
@@ -1302,7 +1333,7 @@ export const createTestUser = async (
 
 1. **✅ Code Quality Infrastructure**: ESLint + Prettier + modern config
 2. **✅ Structured Logging**: Custom logger implementation with metadata
-3. **✅ Integration Testing**: TestContainers with real Redis infrastructure  
+3. **✅ Integration Testing**: TestContainers with real Redis infrastructure
 4. **✅ Error Handling**: JSON parsing and application-level error middleware
 5. **✅ Type Safety**: Eliminated most `any` types, added proper interfaces
 6. **✅ Project Structure**: Clean separation with proper dependency injection
@@ -1317,13 +1348,13 @@ export const createTestUser = async (
 
 ### ⚠️ REMAINING AREAS FOR ENHANCEMENT
 
-| Priority | Issue                           | Estimated Effort | Files Affected |
-|----------|--------------------------------|------------------|----------------|
-| Medium   | Console logging in service layer| 2-3 hours        | `auth.service.ts` |
-| Medium   | Redis retry logic              | 2-3 hours        | `redis/client.ts` |
-| Medium   | Logger output stream handling  | 1-2 hours        | `middleware/logger.ts` |
-| Low      | CORS and rate limiting         | 1-2 hours        | `server.ts` |
-| Low      | Global error handler           | 1-2 hours        | `server.ts` |
+| Priority | Issue                            | Estimated Effort | Files Affected         |
+| -------- | -------------------------------- | ---------------- | ---------------------- |
+| Medium   | Console logging in service layer | 2-3 hours        | `auth.service.ts`      |
+| Medium   | Redis retry logic                | 2-3 hours        | `redis/client.ts`      |
+| Medium   | Logger output stream handling    | 1-2 hours        | `middleware/logger.ts` |
+| Low      | CORS and rate limiting           | 1-2 hours        | `server.ts`            |
+| Low      | Global error handler             | 1-2 hours        | `server.ts`            |
 
 ### 📊 PRODUCTION READINESS ASSESSMENT
 
@@ -1336,7 +1367,7 @@ export const createTestUser = async (
 **Estimated Remaining Effort: 4-6 hours**
 
 1. **Service Layer Logging** (2 hours): Replace console.error with structured logger
-2. **Redis Resilience** (2 hours): Add retry logic and connection health monitoring  
+2. **Redis Resilience** (2 hours): Add retry logic and connection health monitoring
 3. **Security Middleware** (1 hour): Add CORS and basic rate limiting
 4. **Error Handling** (1 hour): Add global error handler and 404 middleware
 
@@ -1357,6 +1388,7 @@ export const createTestUser = async (
 ### 🚀 **Production Deployment Readiness:**
 
 The application is now **85-90% ready for production deployment** with:
+
 - Comprehensive test coverage (unit + integration)
 - Proper error handling and logging infrastructure
 - Security middleware foundation

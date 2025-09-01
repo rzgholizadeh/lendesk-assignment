@@ -35,22 +35,11 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
-    - name: Lint with fix
-      run: npm run lint:fix
+    - name: Lint
+      run: npm run lint
 
-    - name: Format with fix
-      run: npm run format
-
-    - name: Check for changes after lint/format
-      run: |
-        if [[ -n $(git status --porcelain) ]]; then
-          echo "Files were modified by linting/formatting:"
-          git status --short
-          git diff
-          echo "::warning::Code formatting or linting made changes. Please commit these changes."
-        else
-          echo "No changes made by linting/formatting."
-        fi
+    - name: Format check
+      run: npm run format:check
 
     - name: Build
       run: npm run build

@@ -4,9 +4,11 @@ describe('AuthRepository', () => {
   let authRepository: AuthRepository;
   let mockRedisClient: jest.Mocked<{
     multi: jest.Mock;
-    exists: jest.Mock;
     hGetAll: jest.Mock;
     get: jest.Mock;
+    connect: jest.Mock;
+    disconnect: jest.Mock;
+    quit: jest.Mock;
   }>;
   let mockMulti: jest.Mocked<{
     hSet: jest.Mock;
@@ -25,7 +27,9 @@ describe('AuthRepository', () => {
       multi: jest.fn().mockReturnValue(mockMulti),
       get: jest.fn(),
       hGetAll: jest.fn(),
-      exists: jest.fn(),
+      connect: jest.fn(),
+      disconnect: jest.fn(),
+      quit: jest.fn(),
     };
 
     authRepository = new AuthRepository(mockRedisClient);

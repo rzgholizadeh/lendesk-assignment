@@ -2,17 +2,25 @@ import http from 'node:http';
 import { createApp } from './server';
 import { AuthRepository } from './api/auth/auth.repository';
 import { AuthService } from './api/auth/auth.service';
-import {
-  redisClient,
-  connectToRedis,
-  disconnectFromRedis,
-} from './infra/redis/client';
+import { RedisClientService } from './infra/redis/client';
 import { config } from './config';
 import { logger } from './middleware/logger';
 
-async function bootstrap(): Promise<http.Server> {
-  // 1) Connect infra first (fail fast)
-  await connectToRedis();
+interface ServerWithRedisClient extends http.Server {
+  redisClient?: RedisClientService;
+}
+
+async function bootstrap(): Promise<ServerWithRedisClient> {
+  // 1) Create and connect Redis client
+  const redisClient = new RedisClientService(config.redisUrl);
+  try {
+    await redisClient.connect();
+  } catch (error) {
+    logger.error('Bootstrap failed: Redis connection error:', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error; // Let the composition root decide what to do
+  }
 
   // 2) Wire dependencies (no global setters)
   const authRepository = new AuthRepository(redisClient);
@@ -26,7 +34,7 @@ async function bootstrap(): Promise<http.Server> {
     logger.info(
       `HTTP server started on port ${config.port} (env: ${config.environment})`
     );
-  });
+  }) as ServerWithRedisClient;
 
   // Handle server errors
   server.on('error', (err) => {
@@ -36,6 +44,9 @@ async function bootstrap(): Promise<http.Server> {
     });
     process.exit(1);
   });
+
+  // Store redisClient reference for cleanup
+  server.redisClient = redisClient;
 
   return server;
 }
@@ -60,10 +71,26 @@ async function bootstrap(): Promise<http.Server> {
   const shutdown = async (signal: string) => {
     logger.info(`Received shutdown signal: ${signal}`);
     try {
+      // Close HTTP server first
       await new Promise<void>((resolve, reject) => {
         server.close((err) => (err ? reject(err) : resolve()));
       });
-      await disconnectFromRedis();
+
+      // Gracefully quit Redis client
+      if (server.redisClient) {
+        try {
+          await server.redisClient.quit();
+        } catch (quitError) {
+          logger.warn('Redis quit() failed, falling back to disconnect():', {
+            error:
+              quitError instanceof Error
+                ? quitError.message
+                : String(quitError),
+          });
+          await server.redisClient.disconnect();
+        }
+      }
+
       logger.info('Shutdown complete');
       process.exit(0);
     } catch (err) {

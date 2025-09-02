@@ -1,13 +1,8 @@
 import express, { Application } from 'express';
 import helmet from 'helmet';
-import { createApiRouter } from './api';
+import { createApiRouter, AppDependencies } from './api';
 import { healthCheckHandler } from './middleware/health';
 import { jsonErrorHandler } from './middleware/jsonErrorHandler';
-import { IAuthService } from './api/auth/auth.service';
-
-interface AppDependencies {
-  authService: IAuthService;
-}
 
 export const createApp = (dependencies: AppDependencies): Application => {
   const app = express();

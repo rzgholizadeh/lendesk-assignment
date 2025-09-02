@@ -17,6 +17,7 @@ export interface UserCredentials {
 }
 
 export interface StoredUser {
+  //NOTE: stored user is not a good name
   id: string;
   username: string;
   passwordHash: string;

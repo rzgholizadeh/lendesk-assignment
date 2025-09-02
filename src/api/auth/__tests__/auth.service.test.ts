@@ -2,8 +2,10 @@ import { AuthService } from '../auth.service';
 import { IAuthRepository } from '../auth.repository';
 import { User } from '../auth.model';
 import bcrypt from 'bcrypt';
+import { logger } from '../../../middleware/logger';
 
 jest.mock('bcrypt');
+jest.mock('../../../middleware/logger');
 
 describe('AuthService', () => {
   let authService: AuthService;
@@ -21,7 +23,7 @@ describe('AuthService', () => {
     mockBcrypt = bcrypt as jest.Mocked<typeof bcrypt>;
     authService = new AuthService(mockAuthRepository);
 
-    jest.spyOn(console, 'error').mockImplementation(jest.fn());
+    jest.mocked(logger.error).mockImplementation(jest.fn());
   });
 
   afterEach(() => {
@@ -90,10 +92,9 @@ describe('AuthService', () => {
       expect(mockAuthRepository.userExists).toHaveBeenCalledWith('testuser');
       expect(mockBcrypt.hash).toHaveBeenCalledWith('password123', 12);
       expect(mockAuthRepository.createUser).not.toHaveBeenCalled();
-      expect(console.error).toHaveBeenCalledWith(
-        'Error registering user:',
-        expect.any(Error)
-      );
+      expect(logger.error).toHaveBeenCalledWith('Error registering user', {
+        error: expect.any(Error),
+      });
 
       expect(result).toEqual({
         success: false,
@@ -116,10 +117,9 @@ describe('AuthService', () => {
         username: 'testuser',
         passwordHash: 'hashedpassword123',
       });
-      expect(console.error).toHaveBeenCalledWith(
-        'Error registering user:',
-        expect.any(Error)
-      );
+      expect(logger.error).toHaveBeenCalledWith('Error registering user', {
+        error: expect.any(Error),
+      });
 
       expect(result).toEqual({
         success: false,
@@ -136,10 +136,9 @@ describe('AuthService', () => {
 
       expect(mockAuthRepository.userExists).toHaveBeenCalledWith('testuser');
       expect(mockBcrypt.hash).not.toHaveBeenCalled();
-      expect(console.error).toHaveBeenCalledWith(
-        'Error registering user:',
-        expect.any(Error)
-      );
+      expect(logger.error).toHaveBeenCalledWith('Error registering user', {
+        error: expect.any(Error),
+      });
 
       expect(result).toEqual({
         success: false,
@@ -232,10 +231,9 @@ describe('AuthService', () => {
         'testuser'
       );
       expect(mockBcrypt.compare).not.toHaveBeenCalled();
-      expect(console.error).toHaveBeenCalledWith(
-        'Error logging in user:',
-        expect.any(Error)
-      );
+      expect(logger.error).toHaveBeenCalledWith('Error logging in user', {
+        error: expect.any(Error),
+      });
 
       expect(result).toEqual({
         success: false,
@@ -256,10 +254,9 @@ describe('AuthService', () => {
         'password123',
         'hashedpassword123'
       );
-      expect(console.error).toHaveBeenCalledWith(
-        'Error logging in user:',
-        expect.any(Error)
-      );
+      expect(logger.error).toHaveBeenCalledWith('Error logging in user', {
+        error: expect.any(Error),
+      });
 
       expect(result).toEqual({
         success: false,

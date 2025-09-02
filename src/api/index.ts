@@ -2,11 +2,11 @@ import { Router } from 'express';
 import { createAuthController } from './auth/auth.controller';
 import { IAuthService } from './auth/auth.service';
 
-interface ApiDependencies {
+export interface AppDependencies {
   authService: IAuthService;
 }
 
-export const createApiRouter = (dependencies: ApiDependencies): Router => {
+export const createApiRouter = (dependencies: AppDependencies): Router => {
   const apiRouter = Router();
 
   const { registerUser, loginUser } = createAuthController(

@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, RequestHandler, Response } from 'express';
 import { ZodError } from 'zod';
 import {
   registerSchema,
@@ -7,8 +7,16 @@ import {
   LoginRequest,
 } from './auth.schema';
 import { IAuthService } from './auth.service';
+import { logger } from '../../middleware/logger';
 
-export const createAuthController = (authService: IAuthService) => {
+interface IAuthController {
+  registerUser: RequestHandler<object, unknown, RegisterRequest>;
+  loginUser: RequestHandler<object, unknown, LoginRequest>;
+}
+
+export const createAuthController = (
+  authService: IAuthService
+): IAuthController => {
   const registerUser = async (
     req: Request<object, unknown, RegisterRequest>,
     res: Response
@@ -40,7 +48,7 @@ export const createAuthController = (authService: IAuthService) => {
         return;
       }
 
-      console.error('Registration error:', error);
+      logger.error('Registration error', { error });
       res.status(500).json({
         error: 'Registration failed',
       });
@@ -74,7 +82,7 @@ export const createAuthController = (authService: IAuthService) => {
         return;
       }
 
-      console.error('Authentication error:', error);
+      logger.error('Authentication error', { error });
       res.status(500).json({
         error: 'Authentication failed',
       });

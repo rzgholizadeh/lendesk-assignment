@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import { RegisterRequest, LoginRequest } from './auth.schema';
 import { IAuthRepository } from './auth.repository';
+import { logger } from '../../middleware/logger';
 
 export interface AuthServiceResult<T> {
   success: boolean;
@@ -62,7 +63,7 @@ export class AuthService implements IAuthService {
         },
       };
     } catch (error) {
-      console.error('Error registering user:', error);
+      logger.error('Error registering user', { error });
       return {
         success: false,
         error: 'Registration failed',
@@ -103,7 +104,7 @@ export class AuthService implements IAuthService {
         },
       };
     } catch (error) {
-      console.error('Error logging in user:', error);
+      logger.error('Error logging in user', { error });
       return {
         success: false,
         error: 'Authentication failed',

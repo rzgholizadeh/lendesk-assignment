@@ -1,18 +1,6 @@
 import { User, StoredUser } from './auth.model';
 import { v4 as uuidv4 } from 'uuid';
-
-interface RedisClient {
-  multi(): RedisMulti;
-  exists(key: string): Promise<number>;
-  hGetAll(key: string): Promise<Record<string, string>>;
-  get(key: string): Promise<string | null>;
-}
-
-interface RedisMulti {
-  hSet(key: string, mapping: Record<string, string>): RedisMulti;
-  set(key: string, value: string): RedisMulti;
-  exec(): Promise<unknown[]>;
-}
+import { RedisClient } from '../../infra/redis/client';
 
 export interface IAuthRepository {
   createUser(user: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User>;
@@ -28,7 +16,7 @@ export class AuthRepository implements IAuthRepository {
   constructor(private readonly redisClient: RedisClient) {}
 
   public async createUser(
-    userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>
+    userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'> // NOTE: the input here should be pure User model. Not a complex type.
   ): Promise<User> {
     const id = uuidv4();
     const now = new Date();
@@ -67,7 +55,7 @@ export class AuthRepository implements IAuthRepository {
       return null;
     }
 
-    return this.findById(userId);
+    return this.findById(userId); // is it an anti-pattern to use another repository public function in a repository public function?
   }
 
   public async findById(id: string): Promise<User | null> {

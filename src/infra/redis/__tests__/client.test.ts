@@ -6,6 +6,7 @@ jest.mock('../../../middleware/logger', () => ({
   logger: {
     info: jest.fn(),
     error: jest.fn(),
+    warn: jest.fn(),
   },
 }));
 
@@ -14,10 +15,13 @@ describe('Redis Client', () => {
     connect: jest.Mock;
     on: jest.Mock;
     disconnect: jest.Mock;
+    quit: jest.Mock;
+    multi: jest.Mock;
+    hGetAll: jest.Mock;
+    get: jest.Mock;
   }>;
   let processExitSpy: jest.SpyInstance;
-  let connectToRedis: () => Promise<typeof mockRedisClient>;
-  let mockLogger: { info: jest.Mock; error: jest.Mock };
+  let mockLogger: { info: jest.Mock; error: jest.Mock; warn: jest.Mock };
 
   beforeEach(() => {
     jest.resetModules();
@@ -26,6 +30,10 @@ describe('Redis Client', () => {
       connect: jest.fn(),
       on: jest.fn(),
       disconnect: jest.fn(),
+      quit: jest.fn(),
+      multi: jest.fn(),
+      hGetAll: jest.fn(),
+      get: jest.fn(),
     };
 
     (require('redis').createClient as jest.Mock).mockReturnValue(
@@ -35,47 +43,48 @@ describe('Redis Client', () => {
     mockLogger = require('../../../middleware/logger').logger;
     mockLogger.info.mockClear();
     mockLogger.error.mockClear();
+    mockLogger.warn.mockClear();
 
     processExitSpy = jest.spyOn(process, 'exit').mockImplementation();
-
-    const clientModule = require('../client');
-    connectToRedis = clientModule.connectToRedis;
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
   });
 
-  describe('redisClient creation', () => {
-    it('should create Redis client with default URL', () => {
+  describe('RedisClientService', () => {
+    let RedisClientService: typeof import('../client').RedisClientService;
+
+    beforeEach(() => {
+      const clientModule = require('../client');
+      RedisClientService = clientModule.RedisClientService;
+    });
+
+    it('should create Redis client with provided URL', () => {
+      const testUrl = 'redis://localhost:6379';
+      new RedisClientService(testUrl);
       const { createClient } = require('redis');
 
       expect(createClient).toHaveBeenCalledWith({
-        url: 'redis://localhost:6379',
+        url: testUrl,
       });
     });
 
-    it('should create Redis client with custom URL from environment', () => {
-      const originalEnv = process.env.REDIS_URL;
-      process.env.REDIS_URL = 'redis://custom-host:6380';
-
-      jest.resetModules();
-      require('../client');
+    it('should create Redis client with custom URL from constructor', () => {
+      const customUrl = 'redis://custom-host:6380';
+      new RedisClientService(customUrl);
 
       const { createClient } = require('redis');
       expect(createClient).toHaveBeenCalledWith({
-        url: 'redis://custom-host:6380',
+        url: customUrl,
       });
-
-      process.env.REDIS_URL = originalEnv;
     });
-  });
 
-  describe('connectToRedis', () => {
     it('should connect to Redis successfully', async () => {
       mockRedisClient.connect.mockResolvedValue(undefined);
+      const client = new RedisClientService('redis://localhost:6379');
 
-      await connectToRedis();
+      await client.connect();
 
       expect(mockRedisClient.connect).toHaveBeenCalled();
       expect(mockLogger.info).toHaveBeenCalledWith(
@@ -83,46 +92,141 @@ describe('Redis Client', () => {
       );
     });
 
-    it('should handle connection failure and exit process', async () => {
-      const connectionError = new Error('Redis connection failed');
-      mockRedisClient.connect.mockRejectedValue(connectionError);
+    it('should log error and throw on connection failure', async () => {
+      const error = new Error('Connection failed');
+      mockRedisClient.connect.mockRejectedValue(error);
+      const client = new RedisClientService('redis://localhost:6379');
 
-      await connectToRedis();
+      await expect(client.connect()).rejects.toThrow(
+        'Redis connection failed: Connection failed'
+      );
 
-      expect(mockRedisClient.connect).toHaveBeenCalled();
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Failed to connect to Redis:',
-        { error: 'Redis connection failed' }
+        {
+          error: 'Connection failed',
+        }
       );
-      expect(processExitSpy).toHaveBeenCalledWith(1);
+      expect(processExitSpy).not.toHaveBeenCalled();
     });
 
-    it('should handle network timeout errors', async () => {
-      const timeoutError = new Error('ETIMEDOUT');
-      mockRedisClient.connect.mockRejectedValue(timeoutError);
+    it('should handle non-Error objects on connection failure', async () => {
+      mockRedisClient.connect.mockRejectedValue('String error');
+      const client = new RedisClientService('redis://localhost:6379');
 
-      await connectToRedis();
+      await expect(client.connect()).rejects.toThrow(
+        'Redis connection failed: String error'
+      );
 
-      expect(mockRedisClient.connect).toHaveBeenCalled();
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Failed to connect to Redis:',
-        { error: 'ETIMEDOUT' }
+        {
+          error: 'String error',
+        }
       );
-      expect(processExitSpy).toHaveBeenCalledWith(1);
+      expect(processExitSpy).not.toHaveBeenCalled();
     });
 
-    it('should handle connection refused errors', async () => {
-      const refusedError = new Error('ECONNREFUSED');
-      mockRedisClient.connect.mockRejectedValue(refusedError);
+    it('should disconnect from Redis successfully', async () => {
+      mockRedisClient.disconnect.mockResolvedValue(undefined);
+      const client = new RedisClientService('redis://localhost:6379');
 
-      await connectToRedis();
+      await client.disconnect();
 
-      expect(mockRedisClient.connect).toHaveBeenCalled();
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Failed to connect to Redis:',
-        { error: 'ECONNREFUSED' }
+      expect(mockRedisClient.disconnect).toHaveBeenCalled();
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Disconnected from Redis successfully'
       );
-      expect(processExitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it('should log error on disconnection failure but not exit', async () => {
+      const error = new Error('Disconnection failed');
+      mockRedisClient.disconnect.mockRejectedValue(error);
+      const client = new RedisClientService('redis://localhost:6379');
+
+      await client.disconnect();
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Failed to disconnect from Redis:',
+        {
+          error: 'Disconnection failed',
+        }
+      );
+      expect(processExitSpy).not.toHaveBeenCalled();
+    });
+
+    it('should handle non-Error objects on disconnection failure', async () => {
+      mockRedisClient.disconnect.mockRejectedValue('String error');
+      const client = new RedisClientService('redis://localhost:6379');
+
+      await client.disconnect();
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Failed to disconnect from Redis:',
+        {
+          error: 'String error',
+        }
+      );
+      expect(processExitSpy).not.toHaveBeenCalled();
+    });
+
+    it('should quit from Redis successfully', async () => {
+      mockRedisClient.quit.mockResolvedValue(undefined);
+      const client = new RedisClientService('redis://localhost:6379');
+
+      await client.quit();
+
+      expect(mockRedisClient.quit).toHaveBeenCalled();
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Redis client quit successfully'
+      );
+    });
+
+    it('should log error on quit failure but not throw', async () => {
+      const error = new Error('Quit failed');
+      mockRedisClient.quit.mockRejectedValue(error);
+      const client = new RedisClientService('redis://localhost:6379');
+
+      await client.quit();
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Failed to quit Redis client:',
+        {
+          error: 'Quit failed',
+        }
+      );
+    });
+
+    it('should delegate multi() to underlying Redis client', () => {
+      const mockMulti = { hSet: jest.fn(), set: jest.fn(), exec: jest.fn() };
+      mockRedisClient.multi.mockReturnValue(mockMulti);
+      const client = new RedisClientService('redis://localhost:6379');
+
+      const result = client.multi();
+
+      expect(mockRedisClient.multi).toHaveBeenCalled();
+      expect(result).toBe(mockMulti);
+    });
+
+    it('should delegate hGetAll() to underlying Redis client', async () => {
+      const mockData = { field1: 'value1', field2: 'value2' };
+      mockRedisClient.hGetAll.mockResolvedValue(mockData);
+      const client = new RedisClientService('redis://localhost:6379');
+
+      const result = await client.hGetAll('test-key');
+
+      expect(mockRedisClient.hGetAll).toHaveBeenCalledWith('test-key');
+      expect(result).toBe(mockData);
+    });
+
+    it('should delegate get() to underlying Redis client', async () => {
+      mockRedisClient.get.mockResolvedValue('test-value');
+      const client = new RedisClientService('redis://localhost:6379');
+
+      const result = await client.get('test-key');
+
+      expect(mockRedisClient.get).toHaveBeenCalledWith('test-key');
+      expect(result).toBe('test-value');
     });
   });
 });

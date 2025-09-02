@@ -1,13 +1,12 @@
 import request from 'supertest';
 import { Application } from 'express';
 import { createTestApp, createTestUser, TestAppSetup } from './helpers/utils';
-import { RedisClientType } from 'redis';
 import { StartedRedisContainer } from '@testcontainers/redis';
 
 // Type assertion to match the global setup
 const globalWithRedis = global as typeof globalThis & {
   redisContainer: StartedRedisContainer;
-  redisClient: RedisClientType;
+  redisClient: import('redis').RedisClientType;
 };
 
 describe('Server Integration Tests', () => {

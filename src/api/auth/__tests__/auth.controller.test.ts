@@ -1,6 +1,9 @@
-import { Request, Response } from 'express';
+import { Request, Response, RequestHandler } from 'express';
 import { createAuthController } from '../auth.controller';
 import { IAuthService } from '../auth.service';
+import { logger } from '../../../middleware/logger';
+
+jest.mock('../../../middleware/logger');
 
 describe('Auth Controller', () => {
   let mockRequest: Partial<Request>;
@@ -8,8 +11,8 @@ describe('Auth Controller', () => {
   let mockJson: jest.Mock;
   let mockStatus: jest.Mock;
   let mockAuthService: jest.Mocked<IAuthService>;
-  let registerUser: (req: Request, res: Response) => Promise<void>;
-  let loginUser: (req: Request, res: Response) => Promise<void>;
+  let registerUser: RequestHandler;
+  let loginUser: RequestHandler;
 
   beforeEach(() => {
     mockJson = jest.fn();
@@ -30,7 +33,7 @@ describe('Auth Controller', () => {
     registerUser = authController.registerUser;
     loginUser = authController.loginUser;
 
-    jest.spyOn(console, 'error').mockImplementation(jest.fn());
+    jest.mocked(logger.error).mockImplementation(jest.fn());
   });
 
   afterEach(() => {
@@ -45,7 +48,11 @@ describe('Auth Controller', () => {
         data: { userId: 'user_123', username: 'testuser' },
       });
 
-      await registerUser(mockRequest as Request, mockResponse as Response);
+      await registerUser(
+        mockRequest as Request,
+        mockResponse as Response,
+        jest.fn()
+      );
 
       expect(mockAuthService.registerUser).toHaveBeenCalledWith({
         username: 'testuser',
@@ -61,7 +68,11 @@ describe('Auth Controller', () => {
     it('should return 400 when username is missing', async () => {
       mockRequest.body = { password: 'testpassword123' };
 
-      await registerUser(mockRequest as Request, mockResponse as Response);
+      await registerUser(
+        mockRequest as Request,
+        mockResponse as Response,
+        jest.fn()
+      );
 
       expect(mockAuthService.registerUser).not.toHaveBeenCalled();
       expect(mockStatus).toHaveBeenCalledWith(400);
@@ -73,7 +84,11 @@ describe('Auth Controller', () => {
     it('should return 400 when password is missing', async () => {
       mockRequest.body = { username: 'testuser' };
 
-      await registerUser(mockRequest as Request, mockResponse as Response);
+      await registerUser(
+        mockRequest as Request,
+        mockResponse as Response,
+        jest.fn()
+      );
 
       expect(mockAuthService.registerUser).not.toHaveBeenCalled();
       expect(mockStatus).toHaveBeenCalledWith(400);
@@ -85,7 +100,11 @@ describe('Auth Controller', () => {
     it('should return 400 when username is not a string', async () => {
       mockRequest.body = { username: 123, password: 'testpassword123' };
 
-      await registerUser(mockRequest as Request, mockResponse as Response);
+      await registerUser(
+        mockRequest as Request,
+        mockResponse as Response,
+        jest.fn()
+      );
 
       expect(mockAuthService.registerUser).not.toHaveBeenCalled();
       expect(mockStatus).toHaveBeenCalledWith(400);
@@ -97,7 +116,11 @@ describe('Auth Controller', () => {
     it('should return 400 when password is not a string', async () => {
       mockRequest.body = { username: 'testuser', password: 123 };
 
-      await registerUser(mockRequest as Request, mockResponse as Response);
+      await registerUser(
+        mockRequest as Request,
+        mockResponse as Response,
+        jest.fn()
+      );
 
       expect(mockAuthService.registerUser).not.toHaveBeenCalled();
       expect(mockStatus).toHaveBeenCalledWith(400);
@@ -109,7 +132,11 @@ describe('Auth Controller', () => {
     it('should return 400 when username is too short', async () => {
       mockRequest.body = { username: 'ab', password: 'testpassword123' };
 
-      await registerUser(mockRequest as Request, mockResponse as Response);
+      await registerUser(
+        mockRequest as Request,
+        mockResponse as Response,
+        jest.fn()
+      );
 
       expect(mockAuthService.registerUser).not.toHaveBeenCalled();
       expect(mockStatus).toHaveBeenCalledWith(400);
@@ -121,7 +148,11 @@ describe('Auth Controller', () => {
     it('should return 400 when password is too short', async () => {
       mockRequest.body = { username: 'testuser', password: 'short' };
 
-      await registerUser(mockRequest as Request, mockResponse as Response);
+      await registerUser(
+        mockRequest as Request,
+        mockResponse as Response,
+        jest.fn()
+      );
 
       expect(mockAuthService.registerUser).not.toHaveBeenCalled();
       expect(mockStatus).toHaveBeenCalledWith(400);
@@ -133,7 +164,11 @@ describe('Auth Controller', () => {
     it('should return 400 when username contains invalid characters', async () => {
       mockRequest.body = { username: 'test@user', password: 'testpassword123' };
 
-      await registerUser(mockRequest as Request, mockResponse as Response);
+      await registerUser(
+        mockRequest as Request,
+        mockResponse as Response,
+        jest.fn()
+      );
 
       expect(mockAuthService.registerUser).not.toHaveBeenCalled();
       expect(mockStatus).toHaveBeenCalledWith(400);
@@ -148,7 +183,11 @@ describe('Auth Controller', () => {
         new Error('Database connection failed')
       );
 
-      await registerUser(mockRequest as Request, mockResponse as Response);
+      await registerUser(
+        mockRequest as Request,
+        mockResponse as Response,
+        jest.fn()
+      );
 
       expect(mockAuthService.registerUser).toHaveBeenCalledWith({
         username: 'testuser',
@@ -158,10 +197,9 @@ describe('Auth Controller', () => {
       expect(mockJson).toHaveBeenCalledWith({
         error: 'Registration failed',
       });
-      expect(console.error).toHaveBeenCalledWith(
-        'Registration error:',
-        expect.any(Error)
-      );
+      expect(logger.error).toHaveBeenCalledWith('Registration error', {
+        error: expect.any(Error),
+      });
     });
 
     it('should return 409 when username already exists', async () => {
@@ -174,7 +212,11 @@ describe('Auth Controller', () => {
         error: 'Username already exists',
       });
 
-      await registerUser(mockRequest as Request, mockResponse as Response);
+      await registerUser(
+        mockRequest as Request,
+        mockResponse as Response,
+        jest.fn()
+      );
 
       expect(mockAuthService.registerUser).toHaveBeenCalledWith({
         username: 'existinguser',
@@ -195,7 +237,11 @@ describe('Auth Controller', () => {
         data: { userId: 'user_456', username: 'testuser' },
       });
 
-      await loginUser(mockRequest as Request, mockResponse as Response);
+      await loginUser(
+        mockRequest as Request,
+        mockResponse as Response,
+        jest.fn()
+      );
 
       expect(mockAuthService.loginUser).toHaveBeenCalledWith({
         username: 'testuser',
@@ -211,7 +257,11 @@ describe('Auth Controller', () => {
     it('should return 400 when username is missing', async () => {
       mockRequest.body = { password: 'testpass' };
 
-      await loginUser(mockRequest as Request, mockResponse as Response);
+      await loginUser(
+        mockRequest as Request,
+        mockResponse as Response,
+        jest.fn()
+      );
 
       expect(mockAuthService.loginUser).not.toHaveBeenCalled();
       expect(mockStatus).toHaveBeenCalledWith(400);
@@ -223,7 +273,11 @@ describe('Auth Controller', () => {
     it('should return 400 when password is missing', async () => {
       mockRequest.body = { username: 'testuser' };
 
-      await loginUser(mockRequest as Request, mockResponse as Response);
+      await loginUser(
+        mockRequest as Request,
+        mockResponse as Response,
+        jest.fn()
+      );
 
       expect(mockAuthService.loginUser).not.toHaveBeenCalled();
       expect(mockStatus).toHaveBeenCalledWith(400);
@@ -235,7 +289,11 @@ describe('Auth Controller', () => {
     it('should return 400 when username is not a string', async () => {
       mockRequest.body = { username: 123, password: 'testpass' };
 
-      await loginUser(mockRequest as Request, mockResponse as Response);
+      await loginUser(
+        mockRequest as Request,
+        mockResponse as Response,
+        jest.fn()
+      );
 
       expect(mockAuthService.loginUser).not.toHaveBeenCalled();
       expect(mockStatus).toHaveBeenCalledWith(400);
@@ -247,7 +305,11 @@ describe('Auth Controller', () => {
     it('should return 400 when password is not a string', async () => {
       mockRequest.body = { username: 'testuser', password: 123 };
 
-      await loginUser(mockRequest as Request, mockResponse as Response);
+      await loginUser(
+        mockRequest as Request,
+        mockResponse as Response,
+        jest.fn()
+      );
 
       expect(mockAuthService.loginUser).not.toHaveBeenCalled();
       expect(mockStatus).toHaveBeenCalledWith(400);
@@ -259,7 +321,11 @@ describe('Auth Controller', () => {
     it('should return 400 when username is empty', async () => {
       mockRequest.body = { username: '', password: 'testpass' };
 
-      await loginUser(mockRequest as Request, mockResponse as Response);
+      await loginUser(
+        mockRequest as Request,
+        mockResponse as Response,
+        jest.fn()
+      );
 
       expect(mockAuthService.loginUser).not.toHaveBeenCalled();
       expect(mockStatus).toHaveBeenCalledWith(400);
@@ -271,7 +337,11 @@ describe('Auth Controller', () => {
     it('should return 400 when password is empty', async () => {
       mockRequest.body = { username: 'testuser', password: '' };
 
-      await loginUser(mockRequest as Request, mockResponse as Response);
+      await loginUser(
+        mockRequest as Request,
+        mockResponse as Response,
+        jest.fn()
+      );
 
       expect(mockAuthService.loginUser).not.toHaveBeenCalled();
       expect(mockStatus).toHaveBeenCalledWith(400);
@@ -286,7 +356,11 @@ describe('Auth Controller', () => {
         new Error('Database connection failed')
       );
 
-      await loginUser(mockRequest as Request, mockResponse as Response);
+      await loginUser(
+        mockRequest as Request,
+        mockResponse as Response,
+        jest.fn()
+      );
 
       expect(mockAuthService.loginUser).toHaveBeenCalledWith({
         username: 'testuser',
@@ -296,10 +370,9 @@ describe('Auth Controller', () => {
       expect(mockJson).toHaveBeenCalledWith({
         error: 'Authentication failed',
       });
-      expect(console.error).toHaveBeenCalledWith(
-        'Authentication error:',
-        expect.any(Error)
-      );
+      expect(logger.error).toHaveBeenCalledWith('Authentication error', {
+        error: expect.any(Error),
+      });
     });
 
     it('should return 401 when credentials are invalid', async () => {
@@ -309,7 +382,11 @@ describe('Auth Controller', () => {
         error: 'Invalid credentials',
       });
 
-      await loginUser(mockRequest as Request, mockResponse as Response);
+      await loginUser(
+        mockRequest as Request,
+        mockResponse as Response,
+        jest.fn()
+      );
 
       expect(mockAuthService.loginUser).toHaveBeenCalledWith({
         username: 'testuser',
@@ -330,7 +407,11 @@ describe('Auth Controller', () => {
         data: { userId: 'user_123', username: 'testuser' },
       });
 
-      await registerUser(mockRequest as Request, mockResponse as Response);
+      await registerUser(
+        mockRequest as Request,
+        mockResponse as Response,
+        jest.fn()
+      );
 
       expect(mockJson).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -347,7 +428,11 @@ describe('Auth Controller', () => {
         data: { userId: 'user_456', username: 'testuser' },
       });
 
-      await loginUser(mockRequest as Request, mockResponse as Response);
+      await loginUser(
+        mockRequest as Request,
+        mockResponse as Response,
+        jest.fn()
+      );
 
       expect(mockJson).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -360,7 +445,11 @@ describe('Auth Controller', () => {
     it('should return consistent error structure for registration errors', async () => {
       mockRequest.body = { username: 'ab', password: 'testpassword123' };
 
-      await registerUser(mockRequest as Request, mockResponse as Response);
+      await registerUser(
+        mockRequest as Request,
+        mockResponse as Response,
+        jest.fn()
+      );
 
       expect(mockAuthService.registerUser).not.toHaveBeenCalled();
       expect(mockJson).toHaveBeenCalledWith(
@@ -373,7 +462,11 @@ describe('Auth Controller', () => {
     it('should return consistent error structure for login errors', async () => {
       mockRequest.body = { username: '', password: 'testpass' };
 
-      await loginUser(mockRequest as Request, mockResponse as Response);
+      await loginUser(
+        mockRequest as Request,
+        mockResponse as Response,
+        jest.fn()
+      );
 
       expect(mockAuthService.loginUser).not.toHaveBeenCalled();
       expect(mockJson).toHaveBeenCalledWith(

@@ -1,6 +1,6 @@
 import { RedisContainer, StartedRedisContainer } from '@testcontainers/redis';
 import { createClient, RedisClientType } from 'redis';
-import { logger } from '../../../src/middleware/logger';
+import { logger } from '../../../src/common/logger/logger';
 
 declare global {
   var redisContainer: StartedRedisContainer;

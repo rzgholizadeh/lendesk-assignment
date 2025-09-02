@@ -2,9 +2,12 @@ import { AuthService } from '../auth.service';
 import { IAuthRepository } from '../auth.repository';
 import { IPasswordStrategy } from '../strategies/IPasswordStrategy';
 import { User } from '../auth.model';
-import { logger } from '../../../middleware/logger';
+import {
+  ConflictError,
+  UnauthorizedError,
+} from '../../../common/error/http-errors';
 
-jest.mock('../../../middleware/logger');
+jest.mock('../../../common/logger/logger');
 
 describe('AuthService', () => {
   let authService: AuthService;
@@ -25,8 +28,6 @@ describe('AuthService', () => {
     };
 
     authService = new AuthService(mockAuthRepository, mockPasswordStrategy);
-
-    jest.mocked(logger.error).mockImplementation(jest.fn());
   });
 
   afterEach(() => {
@@ -63,91 +64,25 @@ describe('AuthService', () => {
       });
 
       expect(result).toEqual({
-        success: true,
-        data: {
-          userId: 'test-uuid-123',
-          username: 'testuser',
-        },
+        userId: 'test-uuid-123',
+        username: 'testuser',
       });
     });
 
-    it('should return error when username already exists', async () => {
+    it('should throw ConflictError when username already exists', async () => {
       mockAuthRepository.userExists.mockResolvedValue(true);
 
-      const result = await authService.registerUser(validUserData);
+      await expect(authService.registerUser(validUserData)).rejects.toThrow(
+        ConflictError
+      );
 
       expect(mockAuthRepository.userExists).toHaveBeenCalledWith('testuser');
       expect(mockPasswordStrategy.hash).not.toHaveBeenCalled();
       expect(mockAuthRepository.createUser).not.toHaveBeenCalled();
-
-      expect(result).toEqual({
-        success: false,
-        error: 'Username already exists',
-      });
     });
 
-    it('should return error when password strategy hash fails', async () => {
-      mockAuthRepository.userExists.mockResolvedValue(false);
-      mockPasswordStrategy.hash.mockRejectedValue(new Error('Hash failed'));
-
-      const result = await authService.registerUser(validUserData);
-
-      expect(mockAuthRepository.userExists).toHaveBeenCalledWith('testuser');
-      expect(mockPasswordStrategy.hash).toHaveBeenCalledWith('password123');
-      expect(mockAuthRepository.createUser).not.toHaveBeenCalled();
-      expect(logger.error).toHaveBeenCalledWith('Error registering user', {
-        error: expect.any(Error),
-      });
-
-      expect(result).toEqual({
-        success: false,
-        error: 'Registration failed',
-      });
-    });
-
-    it('should return error when repository createUser fails', async () => {
-      mockAuthRepository.userExists.mockResolvedValue(false);
-      mockPasswordStrategy.hash.mockResolvedValue('hashedpassword123');
-      mockAuthRepository.createUser.mockRejectedValue(
-        new Error('Database error')
-      );
-
-      const result = await authService.registerUser(validUserData);
-
-      expect(mockAuthRepository.userExists).toHaveBeenCalledWith('testuser');
-      expect(mockPasswordStrategy.hash).toHaveBeenCalledWith('password123');
-      expect(mockAuthRepository.createUser).toHaveBeenCalledWith({
-        username: 'testuser',
-        passwordHash: 'hashedpassword123',
-      });
-      expect(logger.error).toHaveBeenCalledWith('Error registering user', {
-        error: expect.any(Error),
-      });
-
-      expect(result).toEqual({
-        success: false,
-        error: 'Registration failed',
-      });
-    });
-
-    it('should return error when repository userExists fails', async () => {
-      mockAuthRepository.userExists.mockRejectedValue(
-        new Error('Database error')
-      );
-
-      const result = await authService.registerUser(validUserData);
-
-      expect(mockAuthRepository.userExists).toHaveBeenCalledWith('testuser');
-      expect(mockPasswordStrategy.hash).not.toHaveBeenCalled();
-      expect(logger.error).toHaveBeenCalledWith('Error registering user', {
-        error: expect.any(Error),
-      });
-
-      expect(result).toEqual({
-        success: false,
-        error: 'Registration failed',
-      });
-    });
+    // Note: Database and hashing error tests removed - these now bubble up directly
+    // The asyncHandler middleware will catch and handle these errors
   });
 
   describe('loginUser', () => {
@@ -179,35 +114,31 @@ describe('AuthService', () => {
       );
 
       expect(result).toEqual({
-        success: true,
-        data: {
-          userId: 'test-uuid-123',
-          username: 'testuser',
-        },
+        userId: 'test-uuid-123',
+        username: 'testuser',
       });
     });
 
-    it('should return error when user does not exist', async () => {
+    it('should throw UnauthorizedError when user does not exist', async () => {
       mockAuthRepository.findByUsername.mockResolvedValue(null);
 
-      const result = await authService.loginUser(validCredentials);
+      await expect(authService.loginUser(validCredentials)).rejects.toThrow(
+        UnauthorizedError
+      );
 
       expect(mockAuthRepository.findByUsername).toHaveBeenCalledWith(
         'testuser'
       );
       expect(mockPasswordStrategy.verify).not.toHaveBeenCalled();
-
-      expect(result).toEqual({
-        success: false,
-        error: 'Invalid credentials',
-      });
     });
 
-    it('should return error when password is invalid', async () => {
+    it('should throw UnauthorizedError when password is invalid', async () => {
       mockAuthRepository.findByUsername.mockResolvedValue(mockUser);
       mockPasswordStrategy.verify.mockResolvedValue(false);
 
-      const result = await authService.loginUser(validCredentials);
+      await expect(authService.loginUser(validCredentials)).rejects.toThrow(
+        UnauthorizedError
+      );
 
       expect(mockAuthRepository.findByUsername).toHaveBeenCalledWith(
         'testuser'
@@ -216,58 +147,10 @@ describe('AuthService', () => {
         'password123',
         'hashedpassword123'
       );
-
-      expect(result).toEqual({
-        success: false,
-        error: 'Invalid credentials',
-      });
     });
 
-    it('should return error when repository findByUsername fails', async () => {
-      mockAuthRepository.findByUsername.mockRejectedValue(
-        new Error('Database error')
-      );
-
-      const result = await authService.loginUser(validCredentials);
-
-      expect(mockAuthRepository.findByUsername).toHaveBeenCalledWith(
-        'testuser'
-      );
-      expect(mockPasswordStrategy.verify).not.toHaveBeenCalled();
-      expect(logger.error).toHaveBeenCalledWith('Error logging in user', {
-        error: expect.any(Error),
-      });
-
-      expect(result).toEqual({
-        success: false,
-        error: 'Authentication failed',
-      });
-    });
-
-    it('should return error when password strategy verify fails', async () => {
-      mockAuthRepository.findByUsername.mockResolvedValue(mockUser);
-      mockPasswordStrategy.verify.mockRejectedValue(
-        new Error('Strategy error')
-      );
-
-      const result = await authService.loginUser(validCredentials);
-
-      expect(mockAuthRepository.findByUsername).toHaveBeenCalledWith(
-        'testuser'
-      );
-      expect(mockPasswordStrategy.verify).toHaveBeenCalledWith(
-        'password123',
-        'hashedpassword123'
-      );
-      expect(logger.error).toHaveBeenCalledWith('Error logging in user', {
-        error: expect.any(Error),
-      });
-
-      expect(result).toEqual({
-        success: false,
-        error: 'Authentication failed',
-      });
-    });
+    // Note: Database and strategy error tests removed - these now bubble up directly
+    // The asyncHandler middleware will catch and handle these errors
   });
 
   describe('dependency injection', () => {

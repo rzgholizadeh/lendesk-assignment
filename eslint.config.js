@@ -33,6 +33,10 @@ export default [
       'sort-keys': 'off', // equivalent to "object-literal-sort-keys": false
       'import/order': 'off', // equivalent to "ordered-imports": false
       '@typescript-eslint/interface-name-prefix': 'off', // equivalent to "interface-name": false
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_' },
+      ],
       // Trailing comma rule equivalent
       'comma-dangle': [
         'error',

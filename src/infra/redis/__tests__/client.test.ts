@@ -2,7 +2,7 @@ jest.mock('redis', () => ({
   createClient: jest.fn(),
 }));
 
-jest.mock('../../../middleware/logger', () => ({
+jest.mock('../../../common/logger/logger', () => ({
   logger: {
     info: jest.fn(),
     error: jest.fn(),
@@ -40,7 +40,7 @@ describe('Redis Client', () => {
       mockRedisClient
     );
 
-    mockLogger = require('../../../middleware/logger').logger;
+    mockLogger = require('../../../common/logger/logger').logger;
     mockLogger.info.mockClear();
     mockLogger.error.mockClear();
     mockLogger.warn.mockClear();

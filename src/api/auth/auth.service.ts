@@ -1,29 +1,19 @@
 import { RegisterRequest, LoginRequest } from './auth.schema';
 import { IAuthRepository } from './auth.repository';
-import { logger } from '../../middleware/logger';
 import { IPasswordStrategy } from './strategies/IPasswordStrategy';
+import {
+  ConflictError,
+  UnauthorizedError,
+} from '../../common/error/http-errors';
 
-export interface AuthServiceResult<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
-
-export interface RegisterResult {
-  userId: string;
-  username: string;
-}
-
-export interface LoginResult {
+export interface AuthServiceResult {
   userId: string;
   username: string;
 }
 
 export interface IAuthService {
-  registerUser(
-    userData: RegisterRequest
-  ): Promise<AuthServiceResult<RegisterResult>>;
-  loginUser(credentials: LoginRequest): Promise<AuthServiceResult<LoginResult>>;
+  registerUser(userData: RegisterRequest): Promise<AuthServiceResult>;
+  loginUser(credentials: LoginRequest): Promise<AuthServiceResult>;
 }
 
 export class AuthService implements IAuthService {
@@ -34,79 +24,44 @@ export class AuthService implements IAuthService {
 
   public async registerUser(
     userData: RegisterRequest
-  ): Promise<AuthServiceResult<RegisterResult>> {
-    try {
-      const userExists = await this.authRepository.userExists(
-        userData.username
-      );
-      if (userExists) {
-        return {
-          success: false,
-          error: 'Username already exists',
-        };
-      }
-
-      const passwordHash = await this.passwordStrategy.hash(userData.password);
-
-      const user = await this.authRepository.createUser({
-        username: userData.username,
-        passwordHash,
-      });
-
-      return {
-        success: true,
-        data: {
-          userId: user.id,
-          username: user.username,
-        },
-      };
-    } catch (error) {
-      logger.error('Error registering user', { error });
-      return {
-        success: false,
-        error: 'Registration failed',
-      };
+  ): Promise<{ userId: string; username: string }> {
+    const userExists = await this.authRepository.userExists(userData.username);
+    if (userExists) {
+      throw new ConflictError();
     }
+
+    const passwordHash = await this.passwordStrategy.hash(userData.password);
+
+    const user = await this.authRepository.createUser({
+      username: userData.username,
+      passwordHash,
+    });
+
+    return {
+      userId: user.id,
+      username: user.username,
+    };
   }
 
   public async loginUser(
     credentials: LoginRequest
-  ): Promise<AuthServiceResult<LoginResult>> {
-    try {
-      const user = await this.authRepository.findByUsername(
-        credentials.username
-      );
-      if (!user) {
-        return {
-          success: false,
-          error: 'Invalid credentials',
-        };
-      }
-
-      const isPasswordValid = await this.passwordStrategy.verify(
-        credentials.password,
-        user.passwordHash
-      );
-      if (!isPasswordValid) {
-        return {
-          success: false,
-          error: 'Invalid credentials',
-        };
-      }
-
-      return {
-        success: true,
-        data: {
-          userId: user.id,
-          username: user.username,
-        },
-      };
-    } catch (error) {
-      logger.error('Error logging in user', { error });
-      return {
-        success: false,
-        error: 'Authentication failed',
-      };
+  ): Promise<AuthServiceResult> {
+    const user = await this.authRepository.findByUsername(credentials.username);
+    if (!user) {
+      throw new UnauthorizedError();
     }
+
+    const isPasswordValid = await this.passwordStrategy.verify(
+      credentials.password,
+      user.passwordHash
+    );
+    if (!isPasswordValid) {
+      throw new UnauthorizedError();
+    }
+
+    return {
+      userId: user.id,
+      username: user.username,
+    };
   }
 }

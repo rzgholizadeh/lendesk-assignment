@@ -1,5 +1,5 @@
 import { createClient, RedisClientType } from 'redis';
-import { logger } from '../../middleware/logger';
+import { logger } from '../../common/logger/logger';
 
 export interface RedisClient {
   multi(): RedisMulti;

@@ -1,92 +1,24 @@
-import { Request, RequestHandler, Response } from 'express';
-import { ZodError } from 'zod';
-import {
-  registerSchema,
-  loginSchema,
-  RegisterRequest,
-  LoginRequest,
-} from './auth.schema';
+import { Request, Response } from 'express';
+import { RegisterRequest, LoginRequest } from './auth.schema';
 import { IAuthService } from './auth.service';
-import { logger } from '../../middleware/logger';
 
-interface IAuthController {
-  registerUser: RequestHandler<object, unknown, RegisterRequest>;
-  loginUser: RequestHandler<object, unknown, LoginRequest>;
-}
-
-export const createAuthController = (
-  authService: IAuthService
-): IAuthController => {
+export const createAuthController = (authService: IAuthService) => {
   const registerUser = async (
     req: Request<object, unknown, RegisterRequest>,
     res: Response
   ): Promise<void> => {
-    try {
-      const validatedData = registerSchema.parse(req.body);
-
-      const result = await authService.registerUser(validatedData);
-
-      if (!result.success) {
-        if (result.error === 'Username already exists') {
-          res.status(409).json({ error: result.error });
-          return;
-        }
-        res.status(500).json({ error: result.error || 'Registration failed' });
-        return;
-      }
-
-      res.status(201).json({
-        message: 'User registered successfully',
-        userId: result.data!.userId,
-      });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        const errorMessages = error.issues.map((issue) => issue.message);
-        res.status(400).json({
-          error: errorMessages.join(', '),
-        });
-        return;
-      }
-
-      logger.error('Registration error', { error });
-      res.status(500).json({
-        error: 'Registration failed',
-      });
-    }
+    const data = req.body as RegisterRequest;
+    const user = await authService.registerUser(data);
+    res.status(201).json({ ok: true, user });
   };
 
   const loginUser = async (
     req: Request<object, unknown, LoginRequest>,
     res: Response
   ): Promise<void> => {
-    try {
-      const validatedData = loginSchema.parse(req.body);
-
-      const result = await authService.loginUser(validatedData);
-
-      if (!result.success) {
-        res.status(401).json({ error: result.error || 'Invalid credentials' });
-        return;
-      }
-
-      res.status(200).json({
-        message: 'Login successful',
-        userId: result.data!.userId,
-      });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        const errorMessages = error.issues.map((issue) => issue.message);
-        res.status(400).json({
-          error: errorMessages.join(', '),
-        });
-        return;
-      }
-
-      logger.error('Authentication error', { error });
-      res.status(500).json({
-        error: 'Authentication failed',
-      });
-    }
+    const data = req.body as LoginRequest;
+    const user = await authService.loginUser(data);
+    res.status(200).json({ ok: true, user });
   };
 
   return { registerUser, loginUser };

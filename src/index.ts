@@ -5,7 +5,7 @@ import { AuthService } from './api/auth/auth.service';
 import { BcryptStrategy } from './api/auth/strategies/BcryptStrategy';
 import { RedisClientService } from './infra/redis/client';
 import { config } from './config';
-import { logger } from './middleware/logger';
+import { logger } from './common/logger/logger';
 
 interface ServerWithRedisClient extends http.Server {
   redisClient?: RedisClientService;

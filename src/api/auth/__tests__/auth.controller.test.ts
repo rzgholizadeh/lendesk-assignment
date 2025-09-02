@@ -1,9 +1,8 @@
 import { Request, Response, RequestHandler } from 'express';
 import { createAuthController } from '../auth.controller';
 import { IAuthService } from '../auth.service';
-import { logger } from '../../../middleware/logger';
 
-jest.mock('../../../middleware/logger');
+jest.mock('../../../common/logger/logger');
 
 describe('Auth Controller', () => {
   let mockRequest: Partial<Request>;
@@ -32,8 +31,6 @@ describe('Auth Controller', () => {
     const authController = createAuthController(mockAuthService);
     registerUser = authController.registerUser;
     loginUser = authController.loginUser;
-
-    jest.mocked(logger.error).mockImplementation(jest.fn());
   });
 
   afterEach(() => {
@@ -44,8 +41,8 @@ describe('Auth Controller', () => {
     it('should successfully register a user with valid credentials', async () => {
       mockRequest.body = { username: 'testuser', password: 'testpassword123' };
       mockAuthService.registerUser.mockResolvedValue({
-        success: true,
-        data: { userId: 'user_123', username: 'testuser' },
+        userId: 'user_123',
+        username: 'testuser',
       });
 
       await registerUser(
@@ -60,181 +57,24 @@ describe('Auth Controller', () => {
       });
       expect(mockStatus).toHaveBeenCalledWith(201);
       expect(mockJson).toHaveBeenCalledWith({
-        message: 'User registered successfully',
-        userId: 'user_123',
+        ok: true,
+        user: {
+          userId: 'user_123',
+          username: 'testuser',
+        },
       });
     });
 
-    it('should return 400 when username is missing', async () => {
-      mockRequest.body = { password: 'testpassword123' };
-
-      await registerUser(
-        mockRequest as Request,
-        mockResponse as Response,
-        jest.fn()
-      );
-
-      expect(mockAuthService.registerUser).not.toHaveBeenCalled();
-      expect(mockStatus).toHaveBeenCalledWith(400);
-      expect(mockJson).toHaveBeenCalledWith({
-        error: 'Invalid input: expected string, received undefined',
-      });
-    });
-
-    it('should return 400 when password is missing', async () => {
-      mockRequest.body = { username: 'testuser' };
-
-      await registerUser(
-        mockRequest as Request,
-        mockResponse as Response,
-        jest.fn()
-      );
-
-      expect(mockAuthService.registerUser).not.toHaveBeenCalled();
-      expect(mockStatus).toHaveBeenCalledWith(400);
-      expect(mockJson).toHaveBeenCalledWith({
-        error: 'Invalid input: expected string, received undefined',
-      });
-    });
-
-    it('should return 400 when username is not a string', async () => {
-      mockRequest.body = { username: 123, password: 'testpassword123' };
-
-      await registerUser(
-        mockRequest as Request,
-        mockResponse as Response,
-        jest.fn()
-      );
-
-      expect(mockAuthService.registerUser).not.toHaveBeenCalled();
-      expect(mockStatus).toHaveBeenCalledWith(400);
-      expect(mockJson).toHaveBeenCalledWith({
-        error: 'Invalid input: expected string, received number',
-      });
-    });
-
-    it('should return 400 when password is not a string', async () => {
-      mockRequest.body = { username: 'testuser', password: 123 };
-
-      await registerUser(
-        mockRequest as Request,
-        mockResponse as Response,
-        jest.fn()
-      );
-
-      expect(mockAuthService.registerUser).not.toHaveBeenCalled();
-      expect(mockStatus).toHaveBeenCalledWith(400);
-      expect(mockJson).toHaveBeenCalledWith({
-        error: 'Invalid input: expected string, received number',
-      });
-    });
-
-    it('should return 400 when username is too short', async () => {
-      mockRequest.body = { username: 'ab', password: 'testpassword123' };
-
-      await registerUser(
-        mockRequest as Request,
-        mockResponse as Response,
-        jest.fn()
-      );
-
-      expect(mockAuthService.registerUser).not.toHaveBeenCalled();
-      expect(mockStatus).toHaveBeenCalledWith(400);
-      expect(mockJson).toHaveBeenCalledWith({
-        error: 'Username must be at least 3 characters long',
-      });
-    });
-
-    it('should return 400 when password is too short', async () => {
-      mockRequest.body = { username: 'testuser', password: 'short' };
-
-      await registerUser(
-        mockRequest as Request,
-        mockResponse as Response,
-        jest.fn()
-      );
-
-      expect(mockAuthService.registerUser).not.toHaveBeenCalled();
-      expect(mockStatus).toHaveBeenCalledWith(400);
-      expect(mockJson).toHaveBeenCalledWith({
-        error: 'Password must be at least 8 characters long',
-      });
-    });
-
-    it('should return 400 when username contains invalid characters', async () => {
-      mockRequest.body = { username: 'test@user', password: 'testpassword123' };
-
-      await registerUser(
-        mockRequest as Request,
-        mockResponse as Response,
-        jest.fn()
-      );
-
-      expect(mockAuthService.registerUser).not.toHaveBeenCalled();
-      expect(mockStatus).toHaveBeenCalledWith(400);
-      expect(mockJson).toHaveBeenCalledWith({
-        error: 'Username can only contain letters, numbers, and underscores',
-      });
-    });
-
-    it('should return 500 when service throws an unexpected error', async () => {
-      mockRequest.body = { username: 'testuser', password: 'testpassword123' };
-      mockAuthService.registerUser.mockRejectedValue(
-        new Error('Database connection failed')
-      );
-
-      await registerUser(
-        mockRequest as Request,
-        mockResponse as Response,
-        jest.fn()
-      );
-
-      expect(mockAuthService.registerUser).toHaveBeenCalledWith({
-        username: 'testuser',
-        password: 'testpassword123',
-      });
-      expect(mockStatus).toHaveBeenCalledWith(500);
-      expect(mockJson).toHaveBeenCalledWith({
-        error: 'Registration failed',
-      });
-      expect(logger.error).toHaveBeenCalledWith('Registration error', {
-        error: expect.any(Error),
-      });
-    });
-
-    it('should return 409 when username already exists', async () => {
-      mockRequest.body = {
-        username: 'existinguser',
-        password: 'testpassword123',
-      };
-      mockAuthService.registerUser.mockResolvedValue({
-        success: false,
-        error: 'Username already exists',
-      });
-
-      await registerUser(
-        mockRequest as Request,
-        mockResponse as Response,
-        jest.fn()
-      );
-
-      expect(mockAuthService.registerUser).toHaveBeenCalledWith({
-        username: 'existinguser',
-        password: 'testpassword123',
-      });
-      expect(mockStatus).toHaveBeenCalledWith(409);
-      expect(mockJson).toHaveBeenCalledWith({
-        error: 'Username already exists',
-      });
-    });
+    // Note: Validation tests removed - now handled by validation middleware
+    // Controller only handles successful service calls and lets asyncHandler handle errors
   });
 
   describe('loginUser', () => {
     it('should successfully login a user with valid credentials', async () => {
       mockRequest.body = { username: 'testuser', password: 'testpass' };
       mockAuthService.loginUser.mockResolvedValue({
-        success: true,
-        data: { userId: 'user_456', username: 'testuser' },
+        userId: 'user_456',
+        username: 'testuser',
       });
 
       await loginUser(
@@ -249,162 +89,24 @@ describe('Auth Controller', () => {
       });
       expect(mockStatus).toHaveBeenCalledWith(200);
       expect(mockJson).toHaveBeenCalledWith({
-        message: 'Login successful',
-        userId: 'user_456',
+        ok: true,
+        user: {
+          userId: 'user_456',
+          username: 'testuser',
+        },
       });
     });
 
-    it('should return 400 when username is missing', async () => {
-      mockRequest.body = { password: 'testpass' };
-
-      await loginUser(
-        mockRequest as Request,
-        mockResponse as Response,
-        jest.fn()
-      );
-
-      expect(mockAuthService.loginUser).not.toHaveBeenCalled();
-      expect(mockStatus).toHaveBeenCalledWith(400);
-      expect(mockJson).toHaveBeenCalledWith({
-        error: 'Invalid input: expected string, received undefined',
-      });
-    });
-
-    it('should return 400 when password is missing', async () => {
-      mockRequest.body = { username: 'testuser' };
-
-      await loginUser(
-        mockRequest as Request,
-        mockResponse as Response,
-        jest.fn()
-      );
-
-      expect(mockAuthService.loginUser).not.toHaveBeenCalled();
-      expect(mockStatus).toHaveBeenCalledWith(400);
-      expect(mockJson).toHaveBeenCalledWith({
-        error: 'Invalid input: expected string, received undefined',
-      });
-    });
-
-    it('should return 400 when username is not a string', async () => {
-      mockRequest.body = { username: 123, password: 'testpass' };
-
-      await loginUser(
-        mockRequest as Request,
-        mockResponse as Response,
-        jest.fn()
-      );
-
-      expect(mockAuthService.loginUser).not.toHaveBeenCalled();
-      expect(mockStatus).toHaveBeenCalledWith(400);
-      expect(mockJson).toHaveBeenCalledWith({
-        error: 'Invalid input: expected string, received number',
-      });
-    });
-
-    it('should return 400 when password is not a string', async () => {
-      mockRequest.body = { username: 'testuser', password: 123 };
-
-      await loginUser(
-        mockRequest as Request,
-        mockResponse as Response,
-        jest.fn()
-      );
-
-      expect(mockAuthService.loginUser).not.toHaveBeenCalled();
-      expect(mockStatus).toHaveBeenCalledWith(400);
-      expect(mockJson).toHaveBeenCalledWith({
-        error: 'Invalid input: expected string, received number',
-      });
-    });
-
-    it('should return 400 when username is empty', async () => {
-      mockRequest.body = { username: '', password: 'testpass' };
-
-      await loginUser(
-        mockRequest as Request,
-        mockResponse as Response,
-        jest.fn()
-      );
-
-      expect(mockAuthService.loginUser).not.toHaveBeenCalled();
-      expect(mockStatus).toHaveBeenCalledWith(400);
-      expect(mockJson).toHaveBeenCalledWith({
-        error: 'Username is required',
-      });
-    });
-
-    it('should return 400 when password is empty', async () => {
-      mockRequest.body = { username: 'testuser', password: '' };
-
-      await loginUser(
-        mockRequest as Request,
-        mockResponse as Response,
-        jest.fn()
-      );
-
-      expect(mockAuthService.loginUser).not.toHaveBeenCalled();
-      expect(mockStatus).toHaveBeenCalledWith(400);
-      expect(mockJson).toHaveBeenCalledWith({
-        error: 'Password is required',
-      });
-    });
-
-    it('should return 500 when service throws an unexpected error', async () => {
-      mockRequest.body = { username: 'testuser', password: 'testpass' };
-      mockAuthService.loginUser.mockRejectedValue(
-        new Error('Database connection failed')
-      );
-
-      await loginUser(
-        mockRequest as Request,
-        mockResponse as Response,
-        jest.fn()
-      );
-
-      expect(mockAuthService.loginUser).toHaveBeenCalledWith({
-        username: 'testuser',
-        password: 'testpass',
-      });
-      expect(mockStatus).toHaveBeenCalledWith(500);
-      expect(mockJson).toHaveBeenCalledWith({
-        error: 'Authentication failed',
-      });
-      expect(logger.error).toHaveBeenCalledWith('Authentication error', {
-        error: expect.any(Error),
-      });
-    });
-
-    it('should return 401 when credentials are invalid', async () => {
-      mockRequest.body = { username: 'testuser', password: 'wrongpass' };
-      mockAuthService.loginUser.mockResolvedValue({
-        success: false,
-        error: 'Invalid credentials',
-      });
-
-      await loginUser(
-        mockRequest as Request,
-        mockResponse as Response,
-        jest.fn()
-      );
-
-      expect(mockAuthService.loginUser).toHaveBeenCalledWith({
-        username: 'testuser',
-        password: 'wrongpass',
-      });
-      expect(mockStatus).toHaveBeenCalledWith(401);
-      expect(mockJson).toHaveBeenCalledWith({
-        error: 'Invalid credentials',
-      });
-    });
+    // Note: Validation and error handling tests removed - now handled by middleware
+    // Service errors are now thrown as exceptions and handled by asyncHandler + errorHandler
   });
 
   describe('JSON Response Format', () => {
     it('should return valid JSON for successful registration', async () => {
       mockRequest.body = { username: 'testuser', password: 'testpassword123' };
       mockAuthService.registerUser.mockResolvedValue({
-        success: true,
-        data: { userId: 'user_123', username: 'testuser' },
+        userId: 'user_123',
+        username: 'testuser',
       });
 
       await registerUser(
@@ -415,8 +117,11 @@ describe('Auth Controller', () => {
 
       expect(mockJson).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: expect.any(String),
-          userId: expect.any(String),
+          ok: true,
+          user: expect.objectContaining({
+            userId: expect.any(String),
+            username: expect.any(String),
+          }),
         })
       );
     });
@@ -424,8 +129,8 @@ describe('Auth Controller', () => {
     it('should return valid JSON for successful login', async () => {
       mockRequest.body = { username: 'testuser', password: 'testpass' };
       mockAuthService.loginUser.mockResolvedValue({
-        success: true,
-        data: { userId: 'user_456', username: 'testuser' },
+        userId: 'user_456',
+        username: 'testuser',
       });
 
       await loginUser(
@@ -436,42 +141,11 @@ describe('Auth Controller', () => {
 
       expect(mockJson).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: expect.any(String),
-          userId: expect.any(String),
-        })
-      );
-    });
-
-    it('should return consistent error structure for registration errors', async () => {
-      mockRequest.body = { username: 'ab', password: 'testpassword123' };
-
-      await registerUser(
-        mockRequest as Request,
-        mockResponse as Response,
-        jest.fn()
-      );
-
-      expect(mockAuthService.registerUser).not.toHaveBeenCalled();
-      expect(mockJson).toHaveBeenCalledWith(
-        expect.objectContaining({
-          error: expect.any(String),
-        })
-      );
-    });
-
-    it('should return consistent error structure for login errors', async () => {
-      mockRequest.body = { username: '', password: 'testpass' };
-
-      await loginUser(
-        mockRequest as Request,
-        mockResponse as Response,
-        jest.fn()
-      );
-
-      expect(mockAuthService.loginUser).not.toHaveBeenCalled();
-      expect(mockJson).toHaveBeenCalledWith(
-        expect.objectContaining({
-          error: expect.any(String),
+          ok: true,
+          user: expect.objectContaining({
+            userId: expect.any(String),
+            username: expect.any(String),
+          }),
         })
       );
     });

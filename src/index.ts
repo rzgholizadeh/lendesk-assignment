@@ -47,7 +47,6 @@ async function bootstrap(): Promise<ServerWithRedisClient> {
 
   // Store redisClient reference for cleanup
   server.redisClient = redisClient;
-  
 
   return server;
 }

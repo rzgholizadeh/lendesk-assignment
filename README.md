@@ -1,45 +1,48 @@
-# Authentication API Challenge
+**Project Overview**
+- This is a TypeScript Node.js backend service that exposes a small HTTP API for user authentication (register and login). It follows a clean, layered architecture with explicit dependency injection, uses Redis as a data store, validates inputs with Zod, and includes robust testing (unit and integration) with Jest and Testcontainers. The app is containerized with Docker and orchestrated via Docker Compose for local development.
 
-This repository contains an implementation of the authentication API described in the coding challenge.
+**Technology Stack**
+- Node.js + TypeScript: runtime and language
+- Express 5: HTTP server and routing
+- Redis: data store (users and indexes)
+- Zod: request payload validation
+- Helmet: basic security headers
+- bcrypt: password hashing
+- Jest, ts-jest, Supertest: unit and API testing
+- Testcontainers: integration tests with ephemeral Redis
+- Docker + Docker Compose: local dev environment
 
----
+**Local Environment Setup**
+- Run containers: `npm run dev:build` (build+start) or `npm run dev:start` (start)
+- Run tests: all `npm test` | unit `npm run test:unit` | integration `npm run test:int`
+- Clean up: stop `npm run dev:stop` | remove images `npm run dev:clean`
 
-## Overview
+**Architecture**
+- Brief: Clean, layered design with strict boundaries. Request flows top→down; dependencies point inward. Composition root in `src/index.ts` wires concrete implementations; upper layers depend on interfaces.
+- Schematic:
+  +-----------------------------+
+  | Presentation (Express)      |  routes/controllers, validation (Zod)
+  | src/api/** (controllers)    |
+  +-------------+---------------+
+                |
+                v
+  +-------------+---------------+
+  | Application (Services)      |  business rules, orchestration
+  | src/api/**/.service.ts      |
+  +-------------+---------------+
+                |
+                v
+  +-------------+---------------+
+  | Persistence (Repositories)  |  data access behind interfaces
+  | src/api/**/.repository.ts   |
+  +-------------+---------------+
+                |
+                v
+  +-------------+---------------+
+  | Infrastructure (Redis)      |  external adapters/clients
+  | src/infra/redis/*           |
+  +-----------------------------+
 
-The API is built using **Node.js** with **Redis** as the data store.  
-It provides endpoints to register and authenticate users, returning JSON responses with appropriate HTTP status codes.  
-Each development milestone delivers a complete and functional system, improving iteratively in security and production-readiness.
-
----
-
-## Iterative Development
-
-The project follows a three-iteration plan:
-
-1. **Iteration 1 (MVP)** — Minimal functional system with registration, login, hashed passwords, and JSON error handling.
-2. **Iteration 2 (Security & Robustness)** — Adds password complexity, validation, rate limiting, session expiry, audit logs, and more tests.
-3. **Iteration 3 (Production Readiness & Extensibility)** — Adds logout, token revocation, structured logging, project polish, and annotations for future work.
-
-For full details, see [iterations.md](./iterations.md).
-
----
-
-## Requirements Breakdown
-
-The detailed functional requirements and milestone-specific deliverables are documented in  
-[requirements.md](./requirements.md).
-
----
-
-## Running the Project
-
-Instructions for setup, running the server, and executing tests are provided in the codebase alongside this README.  
-Redis must be available and configured for the API to function.
-
----
-
-## Future Work
-
-Additional enhancements such as MFA, password reset, OAuth integration, and leaked-password checks are noted in the design docs for future development.
-
----
+- SOLID in practice: SRP (one concern per layer), OCP/DIP (swap infra via `IAuthRepository`/`IAuthService`), LSP (alternate impls usable via interfaces), ISP (small focused interfaces).
+- Composition root: `src/index.ts` → `RedisClientService` → `AuthRepository` → `AuthService` → `createApp({ authService })`.
+- Cross-cutting: `middleware/` (JSON error handler, health, logger), `config/` (env), `server.ts` (Express setup).

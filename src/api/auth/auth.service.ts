@@ -1,7 +1,7 @@
-import bcrypt from 'bcrypt';
 import { RegisterRequest, LoginRequest } from './auth.schema';
 import { IAuthRepository } from './auth.repository';
 import { logger } from '../../middleware/logger';
+import { IPasswordStrategy } from './strategies/IPasswordStrategy';
 
 export interface AuthServiceResult<T> {
   success: boolean;
@@ -27,9 +27,10 @@ export interface IAuthService {
 }
 
 export class AuthService implements IAuthService {
-  private readonly saltRounds = 12; // NOTE needs to be handled in env variables and config
-
-  constructor(private readonly authRepository: IAuthRepository) {}
+  constructor(
+    private readonly authRepository: IAuthRepository,
+    private readonly passwordStrategy: IPasswordStrategy
+  ) {}
 
   public async registerUser(
     userData: RegisterRequest
@@ -45,10 +46,7 @@ export class AuthService implements IAuthService {
         };
       }
 
-      const passwordHash = await bcrypt.hash(
-        userData.password,
-        this.saltRounds
-      );
+      const passwordHash = await this.passwordStrategy.hash(userData.password);
 
       const user = await this.authRepository.createUser({
         username: userData.username,
@@ -85,7 +83,7 @@ export class AuthService implements IAuthService {
         };
       }
 
-      const isPasswordValid = await bcrypt.compare(
+      const isPasswordValid = await this.passwordStrategy.verify(
         credentials.password,
         user.passwordHash
       );

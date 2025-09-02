@@ -1,16 +1,15 @@
 import { AuthService } from '../auth.service';
 import { IAuthRepository } from '../auth.repository';
+import { IPasswordStrategy } from '../strategies/IPasswordStrategy';
 import { User } from '../auth.model';
-import bcrypt from 'bcrypt';
 import { logger } from '../../../middleware/logger';
 
-jest.mock('bcrypt');
 jest.mock('../../../middleware/logger');
 
 describe('AuthService', () => {
   let authService: AuthService;
   let mockAuthRepository: jest.Mocked<IAuthRepository>;
-  let mockBcrypt: jest.Mocked<typeof bcrypt>;
+  let mockPasswordStrategy: jest.Mocked<IPasswordStrategy>;
 
   beforeEach(() => {
     mockAuthRepository = {
@@ -20,8 +19,12 @@ describe('AuthService', () => {
       userExists: jest.fn(),
     };
 
-    mockBcrypt = bcrypt as jest.Mocked<typeof bcrypt>;
-    authService = new AuthService(mockAuthRepository);
+    mockPasswordStrategy = {
+      hash: jest.fn(),
+      verify: jest.fn(),
+    };
+
+    authService = new AuthService(mockAuthRepository, mockPasswordStrategy);
 
     jest.mocked(logger.error).mockImplementation(jest.fn());
   });
@@ -47,13 +50,13 @@ describe('AuthService', () => {
       };
 
       mockAuthRepository.userExists.mockResolvedValue(false);
-      mockBcrypt.hash.mockResolvedValue('hashedpassword123' as never);
+      mockPasswordStrategy.hash.mockResolvedValue('hashedpassword123');
       mockAuthRepository.createUser.mockResolvedValue(mockUser);
 
       const result = await authService.registerUser(validUserData);
 
       expect(mockAuthRepository.userExists).toHaveBeenCalledWith('testuser');
-      expect(mockBcrypt.hash).toHaveBeenCalledWith('password123', 12);
+      expect(mockPasswordStrategy.hash).toHaveBeenCalledWith('password123');
       expect(mockAuthRepository.createUser).toHaveBeenCalledWith({
         username: 'testuser',
         passwordHash: 'hashedpassword123',
@@ -74,7 +77,7 @@ describe('AuthService', () => {
       const result = await authService.registerUser(validUserData);
 
       expect(mockAuthRepository.userExists).toHaveBeenCalledWith('testuser');
-      expect(mockBcrypt.hash).not.toHaveBeenCalled();
+      expect(mockPasswordStrategy.hash).not.toHaveBeenCalled();
       expect(mockAuthRepository.createUser).not.toHaveBeenCalled();
 
       expect(result).toEqual({
@@ -83,14 +86,14 @@ describe('AuthService', () => {
       });
     });
 
-    it('should return error when bcrypt hash fails', async () => {
+    it('should return error when password strategy hash fails', async () => {
       mockAuthRepository.userExists.mockResolvedValue(false);
-      mockBcrypt.hash.mockRejectedValue(new Error('Hash failed') as never);
+      mockPasswordStrategy.hash.mockRejectedValue(new Error('Hash failed'));
 
       const result = await authService.registerUser(validUserData);
 
       expect(mockAuthRepository.userExists).toHaveBeenCalledWith('testuser');
-      expect(mockBcrypt.hash).toHaveBeenCalledWith('password123', 12);
+      expect(mockPasswordStrategy.hash).toHaveBeenCalledWith('password123');
       expect(mockAuthRepository.createUser).not.toHaveBeenCalled();
       expect(logger.error).toHaveBeenCalledWith('Error registering user', {
         error: expect.any(Error),
@@ -104,7 +107,7 @@ describe('AuthService', () => {
 
     it('should return error when repository createUser fails', async () => {
       mockAuthRepository.userExists.mockResolvedValue(false);
-      mockBcrypt.hash.mockResolvedValue('hashedpassword123' as never);
+      mockPasswordStrategy.hash.mockResolvedValue('hashedpassword123');
       mockAuthRepository.createUser.mockRejectedValue(
         new Error('Database error')
       );
@@ -112,7 +115,7 @@ describe('AuthService', () => {
       const result = await authService.registerUser(validUserData);
 
       expect(mockAuthRepository.userExists).toHaveBeenCalledWith('testuser');
-      expect(mockBcrypt.hash).toHaveBeenCalledWith('password123', 12);
+      expect(mockPasswordStrategy.hash).toHaveBeenCalledWith('password123');
       expect(mockAuthRepository.createUser).toHaveBeenCalledWith({
         username: 'testuser',
         passwordHash: 'hashedpassword123',
@@ -135,7 +138,7 @@ describe('AuthService', () => {
       const result = await authService.registerUser(validUserData);
 
       expect(mockAuthRepository.userExists).toHaveBeenCalledWith('testuser');
-      expect(mockBcrypt.hash).not.toHaveBeenCalled();
+      expect(mockPasswordStrategy.hash).not.toHaveBeenCalled();
       expect(logger.error).toHaveBeenCalledWith('Error registering user', {
         error: expect.any(Error),
       });
@@ -163,14 +166,14 @@ describe('AuthService', () => {
 
     it('should login user successfully with valid credentials', async () => {
       mockAuthRepository.findByUsername.mockResolvedValue(mockUser);
-      mockBcrypt.compare.mockResolvedValue(true as never);
+      mockPasswordStrategy.verify.mockResolvedValue(true);
 
       const result = await authService.loginUser(validCredentials);
 
       expect(mockAuthRepository.findByUsername).toHaveBeenCalledWith(
         'testuser'
       );
-      expect(mockBcrypt.compare).toHaveBeenCalledWith(
+      expect(mockPasswordStrategy.verify).toHaveBeenCalledWith(
         'password123',
         'hashedpassword123'
       );
@@ -192,7 +195,7 @@ describe('AuthService', () => {
       expect(mockAuthRepository.findByUsername).toHaveBeenCalledWith(
         'testuser'
       );
-      expect(mockBcrypt.compare).not.toHaveBeenCalled();
+      expect(mockPasswordStrategy.verify).not.toHaveBeenCalled();
 
       expect(result).toEqual({
         success: false,
@@ -202,14 +205,14 @@ describe('AuthService', () => {
 
     it('should return error when password is invalid', async () => {
       mockAuthRepository.findByUsername.mockResolvedValue(mockUser);
-      mockBcrypt.compare.mockResolvedValue(false as never);
+      mockPasswordStrategy.verify.mockResolvedValue(false);
 
       const result = await authService.loginUser(validCredentials);
 
       expect(mockAuthRepository.findByUsername).toHaveBeenCalledWith(
         'testuser'
       );
-      expect(mockBcrypt.compare).toHaveBeenCalledWith(
+      expect(mockPasswordStrategy.verify).toHaveBeenCalledWith(
         'password123',
         'hashedpassword123'
       );
@@ -230,7 +233,7 @@ describe('AuthService', () => {
       expect(mockAuthRepository.findByUsername).toHaveBeenCalledWith(
         'testuser'
       );
-      expect(mockBcrypt.compare).not.toHaveBeenCalled();
+      expect(mockPasswordStrategy.verify).not.toHaveBeenCalled();
       expect(logger.error).toHaveBeenCalledWith('Error logging in user', {
         error: expect.any(Error),
       });
@@ -241,16 +244,18 @@ describe('AuthService', () => {
       });
     });
 
-    it('should return error when bcrypt compare fails', async () => {
+    it('should return error when password strategy verify fails', async () => {
       mockAuthRepository.findByUsername.mockResolvedValue(mockUser);
-      mockBcrypt.compare.mockRejectedValue(new Error('Bcrypt error') as never);
+      mockPasswordStrategy.verify.mockRejectedValue(
+        new Error('Strategy error')
+      );
 
       const result = await authService.loginUser(validCredentials);
 
       expect(mockAuthRepository.findByUsername).toHaveBeenCalledWith(
         'testuser'
       );
-      expect(mockBcrypt.compare).toHaveBeenCalledWith(
+      expect(mockPasswordStrategy.verify).toHaveBeenCalledWith(
         'password123',
         'hashedpassword123'
       );
@@ -265,11 +270,11 @@ describe('AuthService', () => {
     });
   });
 
-  describe('configuration', () => {
-    it('should use salt rounds of 12', () => {
-      const saltRounds = (authService as unknown as { saltRounds: number })
-        .saltRounds;
-      expect(saltRounds).toBe(12);
+  describe('dependency injection', () => {
+    it('should be constructed with password strategy', () => {
+      expect(authService).toBeInstanceOf(AuthService);
+      expect(mockPasswordStrategy.hash).toBeDefined();
+      expect(mockPasswordStrategy.verify).toBeDefined();
     });
   });
 });

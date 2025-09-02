@@ -2,6 +2,7 @@ import http from 'node:http';
 import { createApp } from './server';
 import { AuthRepository } from './api/auth/auth.repository';
 import { AuthService } from './api/auth/auth.service';
+import { BcryptStrategy } from './api/auth/strategies/BcryptStrategy';
 import { RedisClientService } from './infra/redis/client';
 import { config } from './config';
 import { logger } from './middleware/logger';
@@ -23,8 +24,9 @@ async function bootstrap(): Promise<ServerWithRedisClient> {
   }
 
   // 2) Wire dependencies (no global setters)
+  const passwordStrategy = new BcryptStrategy(config.saltRounds);
   const authRepository = new AuthRepository(redisClient);
-  const authService = new AuthService(authRepository);
+  const authService = new AuthService(authRepository, passwordStrategy);
 
   // 3) Build the app with its deps (DI via factory args)
   const app = createApp({ authService });

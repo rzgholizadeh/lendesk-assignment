@@ -2,6 +2,7 @@ import { Application } from 'express';
 import { createApp } from '../../../src/server';
 import { AuthService } from '../../../src/api/auth/auth.service';
 import { AuthRepository } from '../../../src/api/auth/auth.repository';
+import { BcryptStrategy } from '../../../src/api/auth/strategies/BcryptStrategy';
 import { RedisClientType } from 'redis';
 import { RedisClient, RedisMulti } from '../../../src/infra/redis/client';
 
@@ -42,7 +43,8 @@ export interface TestAppSetup {
 export const createTestApp = (redisClient: RedisClientType): TestAppSetup => {
   const redisAdapter = new RedisClientAdapter(redisClient);
   const authRepository = new AuthRepository(redisAdapter);
-  const authService = new AuthService(authRepository);
+  const passwordStrategy = new BcryptStrategy(12);
+  const authService = new AuthService(authRepository, passwordStrategy);
   const app = createApp({ authService });
 
   return {
@@ -64,8 +66,9 @@ export const createTestUser = async (
   const userToCreate = { ...defaultUserData, ...userData };
 
   // Create user with hashed password
-  const bcrypt = require('bcrypt');
-  const passwordHash = await bcrypt.hash(userToCreate.password, 12);
+  const { config } = require('../../../src/config');
+  const passwordStrategy = new BcryptStrategy(config.saltRounds);
+  const passwordHash = await passwordStrategy.hash(userToCreate.password);
 
   const user = await authRepository.createUser({
     username: userToCreate.username,

@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   redis:
-    image: redis:8-alpine
+    image: redis:8-alpine   # NOTE: do we have to use redis-stack:latest image here as well? for the index and search to work. Also, will the redis solutions on AWS or GCP support search and index for redis-om?
     container_name: lendesk-redis
     ports:
       - '6379:6379'

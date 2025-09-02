@@ -2,17 +2,18 @@ import http from 'node:http';
 import { createApp } from './server';
 import { AuthRepository } from './api/auth/auth.repository';
 import { AuthService } from './api/auth/auth.service';
-import { RedisClientService } from './infra/redis/client';
+import { createRedisOmClient } from './infra/redis-om/client';
+import { createUserRepository } from './infra/redis-om/repository/user.repository';
 import { config } from './config';
 import { logger } from './middleware/logger';
 
 interface ServerWithRedisClient extends http.Server {
-  redisClient?: RedisClientService;
+  redisClient?: any;
 }
 
 async function bootstrap(): Promise<ServerWithRedisClient> {
   // 1) Create and connect Redis client
-  const redisClient = new RedisClientService(config.redisUrl);
+  const redisClient = createRedisOmClient(config.redisUrl);
   try {
     await redisClient.connect();
   } catch (error) {
@@ -23,7 +24,8 @@ async function bootstrap(): Promise<ServerWithRedisClient> {
   }
 
   // 2) Wire dependencies (no global setters)
-  const authRepository = new AuthRepository(redisClient);
+  const userRepository = createUserRepository(redisClient);
+  const authRepository = new AuthRepository(userRepository);
   const authService = new AuthService(authRepository);
 
   // 3) Build the app with its deps (DI via factory args)
@@ -79,7 +81,7 @@ async function bootstrap(): Promise<ServerWithRedisClient> {
       // Gracefully quit Redis client
       if (server.redisClient) {
         try {
-          await server.redisClient.quit();
+          await server.redisClient.quit();  //NOTE: are these functions still relevant for our redusclient? quit()
         } catch (quitError) {
           logger.warn('Redis quit() failed, falling back to disconnect():', {
             error:
@@ -87,7 +89,7 @@ async function bootstrap(): Promise<ServerWithRedisClient> {
                 ? quitError.message
                 : String(quitError),
           });
-          await server.redisClient.disconnect();
+          await server.redisClient.disconnect();//NOTE: are these functions still relevant for our redusclient? disconnect()
         }
       }
 

@@ -16,7 +16,7 @@ const globalWithRedis = global as typeof globalThis & {
 beforeAll(async () => {
   logger.info('Starting Redis container for integration tests...');
 
-  globalWithRedis.redisContainer = await new RedisContainer('redis:8-alpine')
+  globalWithRedis.redisContainer = await new RedisContainer('redis/redis-stack:7.2.0-v6')
     .withExposedPorts(6379)
     .start();
 

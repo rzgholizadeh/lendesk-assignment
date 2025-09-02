@@ -3,35 +3,7 @@ import { createApp } from '../../../src/server';
 import { AuthService } from '../../../src/api/auth/auth.service';
 import { AuthRepository } from '../../../src/api/auth/auth.repository';
 import { RedisClientType } from 'redis';
-import { RedisClient, RedisMulti } from '../../../src/infra/redis/client';
-
-class RedisClientAdapter implements RedisClient {
-  constructor(private rawClient: RedisClientType) {}
-
-  multi(): RedisMulti {
-    return this.rawClient.multi() as RedisMulti;
-  }
-
-  async hGetAll(key: string): Promise<Record<string, string>> {
-    return this.rawClient.hGetAll(key);
-  }
-
-  async get(key: string): Promise<string | null> {
-    return this.rawClient.get(key);
-  }
-
-  async connect(): Promise<void> {
-    await this.rawClient.connect();
-  }
-
-  async disconnect(): Promise<void> {
-    await this.rawClient.disconnect();
-  }
-
-  async quit(): Promise<void> {
-    await this.rawClient.quit();
-  }
-}
+import { createUserRepository } from '../../../src/infra/redis-om/repository/user.repository';
 
 export interface TestAppSetup {
   app: Application;
@@ -39,9 +11,17 @@ export interface TestAppSetup {
   authRepository: AuthRepository;
 }
 
-export const createTestApp = (redisClient: RedisClientType): TestAppSetup => {
-  const redisAdapter = new RedisClientAdapter(redisClient);
-  const authRepository = new AuthRepository(redisAdapter);
+export const createTestApp = async (redisClient: RedisClientType): Promise<TestAppSetup> => {
+  const userRepository = createUserRepository(redisClient);
+  
+  // Try to create search index for Redis OM (might fail on basic Redis)
+  try {
+    await userRepository.createIndex();
+  } catch (error) {
+    console.log('Warning: Could not create search index, search functionality may not work');
+  }
+  
+  const authRepository = new AuthRepository(userRepository);
   const authService = new AuthService(authRepository);
   const app = createApp({ authService });
 

@@ -13,8 +13,8 @@ describe('Server Integration Tests', () => {
   let testSetup: TestAppSetup;
   let app: Application;
 
-  beforeEach(() => {
-    testSetup = createTestApp(globalWithRedis.redisClient);
+  beforeEach(async () => {
+    testSetup = await createTestApp(globalWithRedis.redisClient);
     app = testSetup.app;
   });
 
@@ -213,17 +213,16 @@ describe('Server Integration Tests', () => {
         .send(userData)
         .expect(201);
 
-      // Verify data exists in Redis directly
-      const userKey = `user:${registerResponse.body.userId}`;
-      const usernameKey = `username:${userData.username}`;
+      // Verify data exists through the repository (Redis OM handles the keys internally)
+      const storedUser = await testSetup.authRepository.findByUsername(userData.username);
+      expect(storedUser).toBeTruthy();
+      expect(storedUser!.username).toBe(userData.username);
+      expect(storedUser!.id).toBe(registerResponse.body.userId);
 
-      const userData_redis = await globalWithRedis.redisClient.hGetAll(userKey);
-      const usernameMapping =
-        await globalWithRedis.redisClient.get(usernameKey);
-
-      expect(userData_redis).toBeTruthy();
-      expect(userData_redis.username).toBe(userData.username);
-      expect(usernameMapping).toBe(registerResponse.body.userId);
+      // Also verify we can find by ID
+      const storedUserById = await testSetup.authRepository.findById(registerResponse.body.userId);
+      expect(storedUserById).toBeTruthy();
+      expect(storedUserById!.username).toBe(userData.username);
     });
 
     it('should handle Redis connection gracefully', async () => {

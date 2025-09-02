@@ -1,91 +1,81 @@
-import { User, StoredUser } from './auth.model';
-import { v4 as uuidv4 } from 'uuid';
-import { RedisClient } from '../../infra/redis/client';
+import { User } from './auth.model';
+import { Repository } from 'redis-om';
 
 export interface IAuthRepository {
-  createUser(user: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User>;
+  createUser(userData: { username: string; passwordHash: string }): Promise<User>;
   findByUsername(username: string): Promise<User | null>;
   findById(id: string): Promise<User | null>;
   userExists(username: string): Promise<boolean>;
 }
 
 export class AuthRepository implements IAuthRepository {
-  private readonly USER_KEY_PREFIX = 'user:';
-  private readonly USERNAME_INDEX_PREFIX = 'username:';
-
-  constructor(private readonly redisClient: RedisClient) {}
+  constructor(private userRepository: Repository) { }
 
   public async createUser(
-    userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'> // NOTE: the input here should be pure User model. Not a complex type.
+    userData: { username: string; passwordHash: string }
   ): Promise<User> {
-    const id = uuidv4();
     const now = new Date();
 
-    const user: User = {
-      id,
+    const savedUser = await this.userRepository.save({
       username: userData.username,
       passwordHash: userData.passwordHash,
       createdAt: now,
       updatedAt: now,
+    });
+
+    if (!savedUser.entityId) {
+      throw new Error('Failed to create user: No entityId returned');
+    }
+
+    return {
+      id: savedUser.entityId,
+      username: savedUser.username,
+      passwordHash: savedUser.passwordHash,
+      createdAt: savedUser.createdAt,
+      updatedAt: savedUser.updatedAt,
     };
-
-    const storedUser: StoredUser = {
-      ...user,
-      createdAt: now.toISOString(),
-      updatedAt: now.toISOString(),
-    };
-
-    await this.redisClient
-      .multi()
-      .hSet(
-        this.getUserKey(id),
-        storedUser as unknown as Record<string, string>
-      )
-      .set(this.getUsernameIndexKey(userData.username), id)
-      .exec();
-
-    return user;
   }
 
   public async findByUsername(username: string): Promise<User | null> {
-    const userId = await this.redisClient.get(
-      this.getUsernameIndexKey(username)
-    );
-    if (!userId) {
-      return null;
-    }
+    const foundUser = await this.userRepository.search()
+      .where('username').equals(username)
+      .return.first();
 
-    return this.findById(userId); // is it an anti-pattern to use another repository public function in a repository public function?
-  }
-
-  public async findById(id: string): Promise<User | null> {
-    const storedUser = await this.redisClient.hGetAll(this.getUserKey(id));
-
-    if (!storedUser || Object.keys(storedUser).length === 0) {
+    if (!foundUser) {
       return null;
     }
 
     return {
-      id: storedUser.id,
-      username: storedUser.username,
-      passwordHash: storedUser.passwordHash,
-      createdAt: new Date(storedUser.createdAt),
-      updatedAt: new Date(storedUser.updatedAt),
+      id: foundUser.entityId,
+      username: foundUser.username,
+      passwordHash: foundUser.passwordHash,
+      createdAt: foundUser.createdAt,
+      updatedAt: foundUser.updatedAt,
+    };
+  }
+
+  public async findById(id: string): Promise<User | null> {
+    const foundUser = await this.userRepository.fetch(id);
+
+    if (!foundUser || !foundUser.entityId) {
+      return null;
+    }
+
+    return {
+      id: foundUser.entityId,
+      username: foundUser.username,
+      passwordHash: foundUser.passwordHash,
+      createdAt: foundUser.createdAt,
+      updatedAt: foundUser.updatedAt,
     };
   }
 
   public async userExists(username: string): Promise<boolean> {
-    const userId = await this.redisClient.get(
-      this.getUsernameIndexKey(username)
-    );
-    return userId !== null;
+    const foundUser = await this.userRepository.search()
+      .where('username').equals(username)
+      .return.first();
+
+    return foundUser !== null && foundUser.entityId !== undefined;
   }
 
-  private getUserKey(id: string): string {
-    return `${this.USER_KEY_PREFIX}${id}`;
-  }
-
-  private getUsernameIndexKey(username: string): string {
-    return `${this.USERNAME_INDEX_PREFIX}${username}`;
-  }
 }

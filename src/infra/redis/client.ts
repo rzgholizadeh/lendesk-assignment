@@ -72,4 +72,5 @@ export class RedisClientService implements RedisClient {
   public async get(key: string): Promise<string | null> {
     return this.client.get(key);
   }
+
 }

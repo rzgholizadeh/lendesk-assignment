@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
-import { ZodType, ZodError } from 'zod';
+import { ZodType } from 'zod';
 import { logger } from '../common/logger/logger';
+import { RequestValidationError } from '../common/error/http-errors';
 
 const SENSITIVE_FIELDS = [
   'password',
@@ -43,5 +44,5 @@ export const validate =
       err: result.error,
       originalBody: sanitizeBody(req.body),
     });
-    return next(result.error as ZodError);
+    throw new RequestValidationError();
   };

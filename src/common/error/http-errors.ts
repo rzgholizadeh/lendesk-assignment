@@ -24,3 +24,10 @@ export class ResponseValidationError extends HttpError {
     this.name = 'ResponseValidationError';
   }
 }
+
+export class RequestValidationError extends HttpError {
+  constructor(message = 'Validation failed') {
+    super(400, message);
+    this.name = 'RequestValidationError';
+  }
+}

@@ -6,16 +6,6 @@ export interface User {
   updatedAt: Date;
 }
 
-export interface CreateUserData {
-  username: string;
-  password: string;
-}
-
-export interface UserCredentials {
-  username: string;
-  password: string;
-}
-
 export interface RedisUser {
   id: string;
   username: string;

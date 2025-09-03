@@ -7,5 +7,10 @@ export const config = {
   environment: process.env.NODE_ENV || 'development',
   redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
   saltRounds: parseInt(process.env.SALT_ROUNDS || '12', 10),
-  logLevel: process.env.NODE_ENV === 'production' ? 'warn' : 'debug',
+  logLevel:
+    process.env.NODE_ENV === 'production'
+      ? 'warn'
+      : process.env.NODE_ENV === 'test'
+        ? 'silent'
+        : 'debug',
 } as const;

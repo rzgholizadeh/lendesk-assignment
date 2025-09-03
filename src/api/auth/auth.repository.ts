@@ -1,4 +1,4 @@
-import { User, StoredUser } from './auth.model';
+import { User, RedisUser } from './auth.model';
 import { v4 as uuidv4 } from 'uuid';
 import { RedisClient } from '../../infra/redis/client';
 
@@ -15,6 +15,46 @@ export class AuthRepository implements IAuthRepository {
 
   constructor(private readonly redisClient: RedisClient) {}
 
+  private toRedisUser(user: User): RedisUser {
+    return {
+      id: user.id,
+      username: user.username,
+      passwordHash: user.passwordHash,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
+    };
+  }
+
+  private fromRedisUser(redisUser: RedisUser): User {
+    return {
+      id: redisUser.id,
+      username: redisUser.username,
+      passwordHash: redisUser.passwordHash,
+      createdAt: new Date(redisUser.createdAt),
+      updatedAt: new Date(redisUser.updatedAt),
+    };
+  }
+
+  private serializeForRedis(redisUser: RedisUser): Record<string, string> {
+    return {
+      id: redisUser.id,
+      username: redisUser.username,
+      passwordHash: redisUser.passwordHash,
+      createdAt: redisUser.createdAt,
+      updatedAt: redisUser.updatedAt,
+    };
+  }
+
+  private deserializeFromRedis(data: Record<string, string>): RedisUser {
+    return {
+      id: data.id,
+      username: data.username,
+      passwordHash: data.passwordHash,
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
+    };
+  }
+
   public async createUser(
     userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'> // NOTE: the input here should be pure User model. Not a complex type.
   ): Promise<User> {
@@ -29,18 +69,11 @@ export class AuthRepository implements IAuthRepository {
       updatedAt: now,
     };
 
-    const storedUser: StoredUser = {
-      ...user,
-      createdAt: now.toISOString(),
-      updatedAt: now.toISOString(),
-    };
+    const redisUser = this.toRedisUser(user);
 
     await this.redisClient
       .multi()
-      .hSet(
-        this.getUserKey(id),
-        storedUser as unknown as Record<string, string>
-      )
+      .hSet(this.getUserKey(id), this.serializeForRedis(redisUser))
       .set(this.getUsernameIndexKey(userData.username), id)
       .exec();
 
@@ -78,18 +111,12 @@ export class AuthRepository implements IAuthRepository {
   }
 
   private async _getUserById(id: string): Promise<User | null> {
-    const storedUser = await this.redisClient.hGetAll(this.getUserKey(id));
+    const redisUser = await this.redisClient.hGetAll(this.getUserKey(id));
 
-    if (!storedUser || Object.keys(storedUser).length === 0) {
+    if (!redisUser || Object.keys(redisUser).length === 0) {
       return null;
     }
 
-    return {
-      id: storedUser.id,
-      username: storedUser.username,
-      passwordHash: storedUser.passwordHash,
-      createdAt: new Date(storedUser.createdAt),
-      updatedAt: new Date(storedUser.updatedAt),
-    };
+    return this.fromRedisUser(this.deserializeFromRedis(redisUser));
   }
 }

@@ -16,8 +16,7 @@ export interface UserCredentials {
   password: string;
 }
 
-export interface StoredUser {
-  //NOTE: stored user is not a good name
+export interface RedisUser {
   id: string;
   username: string;
   passwordHash: string;

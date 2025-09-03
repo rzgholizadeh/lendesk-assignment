@@ -5,6 +5,7 @@ import {
   ConflictError,
   UnauthorizedError,
 } from '../../common/error/http-errors';
+import { DuplicateKeyError } from './auth.errors';
 
 export interface IAuthService {
   registerUser(userData: RegisterRequest): Promise<{ username: string }>;
@@ -20,21 +21,23 @@ export class AuthService implements IAuthService {
   public async registerUser(
     userData: RegisterRequest
   ): Promise<{ username: string }> {
-    const userExists = await this.authRepository.userExists(userData.username);
-    if (userExists) {
-      throw new ConflictError();
-    }
-
     const passwordHash = await this.passwordStrategy.hash(userData.password);
 
-    const user = await this.authRepository.createUser(
-      userData.username,
-      passwordHash
-    );
+    try {
+      const user = await this.authRepository.createUser(
+        userData.username,
+        passwordHash
+      );
 
-    return {
-      username: user.username,
-    };
+      return {
+        username: user.username,
+      };
+    } catch (error) {
+      if (error instanceof DuplicateKeyError) {
+        throw new ConflictError('Username already exists');
+      }
+      throw error;
+    }
   }
 
   public async loginUser(

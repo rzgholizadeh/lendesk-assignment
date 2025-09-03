@@ -19,6 +19,8 @@ describe('Redis Client', () => {
     multi: jest.Mock;
     hGetAll: jest.Mock;
     get: jest.Mock;
+    hSet: jest.Mock;
+    setNX: jest.Mock;
   }>;
   let processExitSpy: jest.SpyInstance;
   let mockLogger: { info: jest.Mock; error: jest.Mock; warn: jest.Mock };
@@ -34,6 +36,8 @@ describe('Redis Client', () => {
       multi: jest.fn(),
       hGetAll: jest.fn(),
       get: jest.fn(),
+      hSet: jest.fn(),
+      setNX: jest.fn(),
     };
 
     (require('redis').createClient as jest.Mock).mockReturnValue(
@@ -197,36 +201,242 @@ describe('Redis Client', () => {
       );
     });
 
-    it('should delegate multi() to underlying Redis client', () => {
-      const mockMulti = { hSet: jest.fn(), set: jest.fn(), exec: jest.fn() };
+    it('should save user and return the same user', async () => {
+      const user = {
+        id: 'test-id',
+        username: 'testuser',
+        passwordHash: 'hashedpass',
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01'),
+      };
+
+      mockRedisClient.hSet.mockResolvedValue(1);
+      const client = new RedisClientService('redis://localhost:6379');
+
+      const result = await client.saveUser('user:test-id', user);
+
+      expect(mockRedisClient.hSet).toHaveBeenCalledWith('user:test-id', {
+        id: 'test-id',
+        username: 'testuser',
+        passwordHash: 'hashedpass',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      });
+      expect(result).toEqual(user);
+    });
+
+    it('should get user by key and return domain model', async () => {
+      const redisData = {
+        id: 'test-id',
+        username: 'testuser',
+        passwordHash: 'hashedpass',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      };
+
+      mockRedisClient.hGetAll.mockResolvedValue(redisData);
+      const client = new RedisClientService('redis://localhost:6379');
+
+      const result = await client.getUserByKey('user:test-id');
+
+      expect(mockRedisClient.hGetAll).toHaveBeenCalledWith('user:test-id');
+      expect(result).toEqual({
+        id: 'test-id',
+        username: 'testuser',
+        passwordHash: 'hashedpass',
+        createdAt: new Date('2024-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2024-01-01T00:00:00.000Z'),
+      });
+    });
+
+    it('should return null when user not found', async () => {
+      mockRedisClient.hGetAll.mockResolvedValue({});
+      const client = new RedisClientService('redis://localhost:6379');
+
+      const result = await client.getUserByKey('user:nonexistent');
+
+      expect(result).toBeNull();
+    });
+
+    it('should save user with index using transaction', async () => {
+      const user = {
+        id: 'test-id',
+        username: 'testuser',
+        passwordHash: 'hashedpass',
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01'),
+      };
+
+      const mockMulti = {
+        hSet: jest.fn().mockReturnThis(),
+        set: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue([null, null]),
+      };
+
       mockRedisClient.multi.mockReturnValue(mockMulti);
       const client = new RedisClientService('redis://localhost:6379');
 
-      const result = client.multi();
+      const result = await client.saveUserWithIndex(
+        'user:test-id',
+        'username:testuser',
+        user
+      );
 
-      expect(mockRedisClient.multi).toHaveBeenCalled();
-      expect(result).toBe(mockMulti);
+      expect(mockMulti.hSet).toHaveBeenCalledWith('user:test-id', {
+        id: 'test-id',
+        username: 'testuser',
+        passwordHash: 'hashedpass',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      });
+      expect(mockMulti.set).toHaveBeenCalledWith(
+        'username:testuser',
+        'test-id'
+      );
+      expect(result).toEqual(user);
     });
 
-    it('should delegate hGetAll() to underlying Redis client', async () => {
-      const mockData = { field1: 'value1', field2: 'value2' };
-      mockRedisClient.hGetAll.mockResolvedValue(mockData);
+    it('should throw error when transaction fails', async () => {
+      const user = {
+        id: 'test-id',
+        username: 'testuser',
+        passwordHash: 'hashedpass',
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01'),
+      };
+
+      const mockMulti = {
+        hSet: jest.fn().mockReturnThis(),
+        set: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(null),
+      };
+
+      mockRedisClient.multi.mockReturnValue(mockMulti);
       const client = new RedisClientService('redis://localhost:6379');
 
-      const result = await client.hGetAll('test-key');
-
-      expect(mockRedisClient.hGetAll).toHaveBeenCalledWith('test-key');
-      expect(result).toBe(mockData);
+      await expect(
+        client.saveUserWithIndex('user:test-id', 'username:testuser', user)
+      ).rejects.toThrow('User save transaction failed');
     });
 
-    it('should delegate get() to underlying Redis client', async () => {
-      mockRedisClient.get.mockResolvedValue('test-value');
+    it('should get user ID by index', async () => {
+      mockRedisClient.get.mockResolvedValue('test-id');
       const client = new RedisClientService('redis://localhost:6379');
 
-      const result = await client.get('test-key');
+      const result = await client.getUserIdByIndex('username:testuser');
 
-      expect(mockRedisClient.get).toHaveBeenCalledWith('test-key');
-      expect(result).toBe('test-value');
+      expect(mockRedisClient.get).toHaveBeenCalledWith('username:testuser');
+      expect(result).toBe('test-id');
+    });
+
+    it('should return null when index not found', async () => {
+      mockRedisClient.get.mockResolvedValue(null);
+      const client = new RedisClientService('redis://localhost:6379');
+
+      const result = await client.getUserIdByIndex('username:nonexistent');
+
+      expect(result).toBeNull();
+    });
+
+    it('should save user with unique index successfully', async () => {
+      const user = {
+        id: 'test-id',
+        username: 'testuser',
+        passwordHash: 'hashedpass',
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01'),
+      };
+
+      const mockMulti = {
+        setNX: jest.fn().mockReturnThis(),
+        hSet: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue([
+          [null, 1],
+          [null, 'OK'],
+        ]), // setNX succeeded
+      };
+
+      mockRedisClient.multi.mockReturnValue(mockMulti);
+      const client = new RedisClientService('redis://localhost:6379');
+
+      const result = await client.saveUserWithUniqueIndex(
+        'user:test-id',
+        'username:testuser',
+        user
+      );
+
+      expect(mockMulti.setNX).toHaveBeenCalledWith(
+        'username:testuser',
+        'test-id'
+      );
+      expect(mockMulti.hSet).toHaveBeenCalledWith('user:test-id', {
+        id: 'test-id',
+        username: 'testuser',
+        passwordHash: 'hashedpass',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      });
+      expect(result.success).toBe(true);
+      expect(result.user).toEqual(user);
+    });
+
+    it('should return success false when username already exists', async () => {
+      const user = {
+        id: 'test-id',
+        username: 'testuser',
+        passwordHash: 'hashedpass',
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01'),
+      };
+
+      const mockMulti = {
+        setNX: jest.fn().mockReturnThis(),
+        hSet: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue([
+          [null, 0],
+          [null, 'OK'],
+        ]), // setNX failed
+      };
+
+      mockRedisClient.multi.mockReturnValue(mockMulti);
+      const client = new RedisClientService('redis://localhost:6379');
+
+      const result = await client.saveUserWithUniqueIndex(
+        'user:test-id',
+        'username:testuser',
+        user
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.user).toBeUndefined();
+    });
+
+    it('should return success false when transaction fails', async () => {
+      const user = {
+        id: 'test-id',
+        username: 'testuser',
+        passwordHash: 'hashedpass',
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01'),
+      };
+
+      const mockMulti = {
+        setNX: jest.fn().mockReturnThis(),
+        hSet: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(null), // Transaction failed
+      };
+
+      mockRedisClient.multi.mockReturnValue(mockMulti);
+      const client = new RedisClientService('redis://localhost:6379');
+
+      const result = await client.saveUserWithUniqueIndex(
+        'user:test-id',
+        'username:testuser',
+        user
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.user).toBeUndefined();
     });
   });
 });

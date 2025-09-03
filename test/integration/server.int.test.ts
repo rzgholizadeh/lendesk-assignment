@@ -82,6 +82,39 @@ describe('Server Integration Tests', () => {
         );
       });
 
+      it('should enforce atomic username uniqueness under concurrent requests', async () => {
+        const userData = {
+          username: 'concurrentuser',
+          password: 'password123',
+        };
+
+        // Make concurrent registration requests
+        const requests = Array.from({ length: 5 }, () =>
+          request(app).post('/api/v1/auth/register').send(userData)
+        );
+
+        const responses = await Promise.allSettled(requests);
+
+        // Count successful and failed requests
+        const successful = responses.filter(
+          (r) => r.status === 'fulfilled' && r.value.status === 201
+        );
+        const conflicts = responses.filter(
+          (r) => r.status === 'fulfilled' && r.value.status === 409
+        );
+
+        // Exactly one should succeed, others should fail with conflict
+        expect(successful).toHaveLength(1);
+        expect(conflicts).toHaveLength(4);
+
+        // Verify only one user exists in database
+        const storedUser = await testSetup.authRepository.findByUsername(
+          userData.username
+        );
+        expect(storedUser).toBeTruthy();
+        expect(storedUser!.username).toBe(userData.username);
+      });
+
       it('should validate required fields', async () => {
         const response = await request(app)
           .post('/api/v1/auth/register')

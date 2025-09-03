@@ -1,6 +1,7 @@
-import { User, RedisUser } from './auth.model';
+import { User } from './auth.model';
 import { v4 as uuidv4 } from 'uuid';
 import { RedisClient } from '../../infra/redis/client';
+import { DuplicateKeyError } from './auth.errors';
 
 export interface IAuthRepository {
   createUser(username: string, passwordHash: string): Promise<User>;
@@ -14,46 +15,6 @@ export class AuthRepository implements IAuthRepository {
   private readonly USERNAME_INDEX_PREFIX = 'username:';
 
   constructor(private readonly redisClient: RedisClient) {}
-
-  private toRedisUser(user: User): RedisUser {
-    return {
-      id: user.id,
-      username: user.username,
-      passwordHash: user.passwordHash,
-      createdAt: user.createdAt.toISOString(),
-      updatedAt: user.updatedAt.toISOString(),
-    };
-  }
-
-  private fromRedisUser(redisUser: RedisUser): User {
-    return {
-      id: redisUser.id,
-      username: redisUser.username,
-      passwordHash: redisUser.passwordHash,
-      createdAt: new Date(redisUser.createdAt),
-      updatedAt: new Date(redisUser.updatedAt),
-    };
-  }
-
-  private serializeForRedis(redisUser: RedisUser): Record<string, string> {
-    return {
-      id: redisUser.id,
-      username: redisUser.username,
-      passwordHash: redisUser.passwordHash,
-      createdAt: redisUser.createdAt,
-      updatedAt: redisUser.updatedAt,
-    };
-  }
-
-  private deserializeFromRedis(data: Record<string, string>): RedisUser {
-    return {
-      id: data.id,
-      username: data.username,
-      passwordHash: data.passwordHash,
-      createdAt: data.createdAt,
-      updatedAt: data.updatedAt,
-    };
-  }
 
   public async createUser(
     username: string,
@@ -70,34 +31,39 @@ export class AuthRepository implements IAuthRepository {
       updatedAt: now,
     };
 
-    const redisUser = this.toRedisUser(user);
+    const result = await this.redisClient.saveUserWithUniqueIndex(
+      this.getUserKey(id),
+      this.getUsernameIndexKey(username),
+      user
+    );
 
-    await this.redisClient
-      .multi()
-      .hSet(this.getUserKey(id), this.serializeForRedis(redisUser))
-      .set(this.getUsernameIndexKey(username), id)
-      .exec();
+    if (!result.success) {
+      throw new DuplicateKeyError(
+        `username:${username}`,
+        'Username already exists'
+      );
+    }
 
-    return user;
+    return result.user!;
   }
 
   public async findByUsername(username: string): Promise<User | null> {
-    const userId = await this.redisClient.get(
+    const userId = await this.redisClient.getUserIdByIndex(
       this.getUsernameIndexKey(username)
     );
     if (!userId) {
       return null;
     }
 
-    return this._getUserById(userId);
+    return await this.redisClient.getUserByKey(this.getUserKey(userId));
   }
 
   public async findById(id: string): Promise<User | null> {
-    return this._getUserById(id);
+    return await this.redisClient.getUserByKey(this.getUserKey(id));
   }
 
   public async userExists(username: string): Promise<boolean> {
-    const userId = await this.redisClient.get(
+    const userId = await this.redisClient.getUserIdByIndex(
       this.getUsernameIndexKey(username)
     );
     return userId !== null;
@@ -109,15 +75,5 @@ export class AuthRepository implements IAuthRepository {
 
   private getUsernameIndexKey(username: string): string {
     return `${this.USERNAME_INDEX_PREFIX}${username}`;
-  }
-
-  private async _getUserById(id: string): Promise<User | null> {
-    const redisUser = await this.redisClient.hGetAll(this.getUserKey(id));
-
-    if (!redisUser || Object.keys(redisUser).length === 0) {
-      return null;
-    }
-
-    return this.fromRedisUser(this.deserializeFromRedis(redisUser));
   }
 }

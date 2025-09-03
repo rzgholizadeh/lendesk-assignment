@@ -6,6 +6,7 @@ import {
   ConflictError,
   UnauthorizedError,
 } from '../../../common/error/http-errors';
+import { DuplicateKeyError } from '../auth.errors';
 
 jest.mock('../../../common/logger/logger');
 
@@ -50,13 +51,11 @@ describe('AuthService', () => {
         updatedAt: new Date('2023-01-01T00:00:00.000Z'),
       };
 
-      mockAuthRepository.userExists.mockResolvedValue(false);
       mockPasswordStrategy.hash.mockResolvedValue('hashedpassword123');
       mockAuthRepository.createUser.mockResolvedValue(mockUser);
 
       const result = await authService.registerUser(validUserData);
 
-      expect(mockAuthRepository.userExists).toHaveBeenCalledWith('testuser');
       expect(mockPasswordStrategy.hash).toHaveBeenCalledWith('password123');
       expect(mockAuthRepository.createUser).toHaveBeenCalledWith(
         'testuser',
@@ -68,16 +67,32 @@ describe('AuthService', () => {
       });
     });
 
-    it('should throw ConflictError when username already exists', async () => {
-      mockAuthRepository.userExists.mockResolvedValue(true);
+    it('should throw ConflictError when DuplicateKeyError occurs', async () => {
+      mockPasswordStrategy.hash.mockResolvedValue('hashedpassword123');
+      mockAuthRepository.createUser.mockRejectedValue(
+        new DuplicateKeyError('username:testuser')
+      );
 
       await expect(authService.registerUser(validUserData)).rejects.toThrow(
         ConflictError
       );
 
-      expect(mockAuthRepository.userExists).toHaveBeenCalledWith('testuser');
-      expect(mockPasswordStrategy.hash).not.toHaveBeenCalled();
-      expect(mockAuthRepository.createUser).not.toHaveBeenCalled();
+      expect(mockPasswordStrategy.hash).toHaveBeenCalledWith('password123');
+      expect(mockAuthRepository.createUser).toHaveBeenCalledWith(
+        'testuser',
+        'hashedpassword123'
+      );
+    });
+
+    it('should propagate other errors from repository', async () => {
+      mockPasswordStrategy.hash.mockResolvedValue('hashedpassword123');
+      mockAuthRepository.createUser.mockRejectedValue(
+        new Error('Redis connection failed')
+      );
+
+      await expect(authService.registerUser(validUserData)).rejects.toThrow(
+        'Redis connection failed'
+      );
     });
 
     // Note: Database and hashing error tests removed - these now bubble up directly

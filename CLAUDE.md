@@ -24,7 +24,7 @@ After any change in the code logic, the validation steps are these sequence:
 
 Each step comes after passing of the previous step.
 
-## CRUCIAL: Commit Template Rules
+## Commit Template Rules
 
 - all commit messages should use this following rules:
 

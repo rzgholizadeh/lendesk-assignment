@@ -13,7 +13,6 @@ interface ServerWithRedisClient extends http.Server {
 }
 
 async function bootstrap(): Promise<ServerWithRedisClient> {
-  // 1) Create and connect Redis client
   const redisClient = new RedisClientService(config.redisUrl);
   try {
     await redisClient.connect();
@@ -21,39 +20,33 @@ async function bootstrap(): Promise<ServerWithRedisClient> {
     logger.error('Bootstrap failed: Redis connection error:', {
       error: error instanceof Error ? error.message : String(error),
     });
-    throw error; // Let the composition root decide what to do
+    throw error;
   }
 
-  // 2) Wire dependencies (no global setters)
   const passwordStrategy = new BcryptStrategy(config.saltRounds);
   const authRepository = new AuthRepository(redisClient);
   const authService = new AuthService(authRepository, passwordStrategy);
   const authController = new AuthController(authService);
 
-  // 3) Build the app with its deps (DI via factory args)
   const app = createApp({ authController });
 
-  // 4) Start HTTP server (bind on 0.0.0.0 for containers)
   const server = app.listen(config.port, '0.0.0.0', () => {
     logger.info(
       `HTTP server started on port ${config.port} (env: ${config.environment})`
     );
   }) as ServerWithRedisClient;
 
-  // Handle server errors
   server.on('error', (err) => {
     logger.error('HTTP server error:', { err });
     process.exit(1);
   });
 
-  // Store redisClient reference for cleanup
   server.redisClient = redisClient;
 
   return server;
 }
 
 (async () => {
-  // Guard rails for unhandled failures
   process.on('uncaughtException', (err) => {
     logger.error('Uncaught exception:', { err });
     process.exit(1);
@@ -65,16 +58,13 @@ async function bootstrap(): Promise<ServerWithRedisClient> {
 
   const server = await bootstrap();
 
-  // Graceful shutdown (SIGTERM/SIGINT from Docker/K8s)
   const shutdown = async (signal: string) => {
     logger.info(`Received shutdown signal: ${signal}`);
     try {
-      // Close HTTP server first
       await new Promise<void>((resolve, reject) => {
         server.close((err) => (err ? reject(err) : resolve()));
       });
 
-      // Gracefully quit Redis client
       if (server.redisClient) {
         try {
           await server.redisClient.quit();
@@ -102,7 +92,6 @@ async function bootstrap(): Promise<ServerWithRedisClient> {
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
 })().catch((err) => {
-  // Final catch-all for bootstrap errors
   logger.error('Bootstrap failed:', {
     error: err instanceof Error ? err.message : String(err),
   });

@@ -7,7 +7,6 @@ declare global {
   var redisClient: RedisClientType;
 }
 
-// Type assertion to help TypeScript understand global declarations
 const globalWithRedis = global as typeof globalThis & {
   redisContainer: StartedRedisContainer;
   redisClient: RedisClientType;

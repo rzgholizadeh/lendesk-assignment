@@ -79,9 +79,6 @@ describe('AuthService', () => {
       expect(mockPasswordStrategy.hash).not.toHaveBeenCalled();
       expect(mockAuthRepository.createUser).not.toHaveBeenCalled();
     });
-
-    // Note: Database and hashing error tests removed - these now bubble up directly
-    // The asyncHandler middleware will catch and handle these errors
   });
 
   describe('loginUser', () => {
@@ -146,9 +143,6 @@ describe('AuthService', () => {
         'hashedpassword123'
       );
     });
-
-    // Note: Database and strategy error tests removed - these now bubble up directly
-    // The asyncHandler middleware will catch and handle these errors
   });
 
   describe('dependency injection', () => {

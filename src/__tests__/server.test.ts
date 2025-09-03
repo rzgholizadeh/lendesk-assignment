@@ -104,9 +104,6 @@ describe('Server - createApp', () => {
         password: 'password123',
       });
     });
-
-    // Note: Authentication failure test removed - service now throws UnauthorizedError
-    // which is handled by the errorHandler middleware
   });
 
   describe('Express middleware', () => {

@@ -67,7 +67,6 @@ export const createTestUser = async (
 
   const userToCreate = { ...defaultUserData, ...userData };
 
-  // Create user with hashed password
   const { config } = require('../../../src/config');
   const passwordStrategy = new BcryptStrategy(config.saltRounds);
   const passwordHash = await passwordStrategy.hash(userToCreate.password);

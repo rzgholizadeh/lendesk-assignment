@@ -56,9 +56,6 @@ describe('AuthController', () => {
         username: 'testuser',
       });
     });
-
-    // Note: Validation tests removed - now handled by validation middleware
-    // Controller only handles successful service calls and lets asyncHandler handle errors
   });
 
   describe('loginUser', () => {
@@ -83,9 +80,6 @@ describe('AuthController', () => {
         username: 'testuser',
       });
     });
-
-    // Note: Validation and error handling tests removed - now handled by middleware
-    // Service errors are now thrown as exceptions and handled by asyncHandler + errorHandler
   });
 
   describe('JSON Response Format', () => {

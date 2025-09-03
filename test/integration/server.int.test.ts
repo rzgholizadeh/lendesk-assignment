@@ -3,7 +3,6 @@ import { Application } from 'express';
 import { createTestApp, createTestUser, TestAppSetup } from './helpers/utils';
 import { StartedRedisContainer } from '@testcontainers/redis';
 
-// Type assertion to match the global setup
 const globalWithRedis = global as typeof globalThis & {
   redisContainer: StartedRedisContainer;
   redisClient: import('redis').RedisClientType;
@@ -49,7 +48,6 @@ describe('Server Integration Tests', () => {
         expect(response.body).toHaveProperty('username');
         expect(typeof response.body.username).toBe('string');
 
-        // Verify user was actually stored in Redis
         const storedUser = await testSetup.authRepository.findByUsername(
           userData.username
         );
@@ -64,13 +62,11 @@ describe('Server Integration Tests', () => {
           password: 'password123',
         };
 
-        // Register first user
         await request(app)
           .post('/api/v1/auth/register')
           .send(userData)
           .expect(201);
 
-        // Attempt to register same username again
         const response = await request(app)
           .post('/api/v1/auth/register')
           .send(userData)
@@ -96,7 +92,7 @@ describe('Server Integration Tests', () => {
           .post('/api/v1/auth/register')
           .send({
             username: 'testuser',
-            password: '123', // Too short
+            password: '123',
           })
           .expect(400);
 
@@ -175,7 +171,6 @@ describe('Server Integration Tests', () => {
           password: 'flowpassword123',
         };
 
-        // Step 1: Register user
         const registerResponse = await request(app)
           .post('/api/v1/auth/register')
           .send(userData)
@@ -183,7 +178,6 @@ describe('Server Integration Tests', () => {
 
         const username = registerResponse.body.username;
 
-        // Step 2: Login with same credentials
         const loginResponse = await request(app)
           .post('/api/v1/auth/login')
           .send(userData)
@@ -192,7 +186,6 @@ describe('Server Integration Tests', () => {
         expect(loginResponse.body.username).toBe(username);
         expect(loginResponse.body.message).toBe('Login successful');
 
-        // Step 3: Verify user persists in Redis
         const storedUser = await testSetup.authRepository.findByUsername(
           userData.username
         );
@@ -209,20 +202,17 @@ describe('Server Integration Tests', () => {
         password: 'persistent123',
       };
 
-      // Register user
       await request(app)
         .post('/api/v1/auth/register')
         .send(userData)
         .expect(201);
 
-      // Verify data exists in Redis by finding the user
       const storedUser = await testSetup.authRepository.findByUsername(
         userData.username
       );
       expect(storedUser).toBeTruthy();
       expect(storedUser!.username).toBe(userData.username);
 
-      // Verify Redis mapping exists
       const usernameKey = `username:${userData.username}`;
       const usernameMapping =
         await globalWithRedis.redisClient.get(usernameKey);
@@ -230,7 +220,6 @@ describe('Server Integration Tests', () => {
     });
 
     it('should handle Redis connection gracefully', async () => {
-      // This test verifies the application responds appropriately when Redis is available
       expect(globalWithRedis.redisClient.isOpen).toBe(true);
 
       const response = await request(app)

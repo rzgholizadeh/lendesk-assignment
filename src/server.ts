@@ -19,11 +19,7 @@ export const createApp = (dependencies: AppDependencies): Application => {
     })
   );
   app.use(express.json());
-
-  // Health check
   app.get('/health', healthCheckHandler);
-
-  // API routes with dependencies
   app.use('/api/v1', createApiRouter(dependencies));
   app.use(errorHandler);
 

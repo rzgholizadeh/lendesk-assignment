@@ -17,3 +17,10 @@ export class UnauthorizedError extends HttpError {
     super(401, message);
   }
 }
+
+export class ResponseValidationError extends HttpError {
+  constructor(message = 'Internal Server Error') {
+    super(500, message);
+    this.name = 'ResponseValidationError';
+  }
+}

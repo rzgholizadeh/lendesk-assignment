@@ -1,6 +1,7 @@
 import { Application } from 'express';
 import { createApp } from '../../../src/server';
 import { AuthService } from '../../../src/api/auth/auth.service';
+import { AuthController } from '../../../src/api/auth/auth.controller';
 import { AuthRepository } from '../../../src/api/auth/auth.repository';
 import { BcryptStrategy } from '../../../src/api/auth/strategies/BcryptStrategy';
 import { RedisClientType } from 'redis';
@@ -45,7 +46,8 @@ export const createTestApp = (redisClient: RedisClientType): TestAppSetup => {
   const authRepository = new AuthRepository(redisAdapter);
   const passwordStrategy = new BcryptStrategy(12);
   const authService = new AuthService(authRepository, passwordStrategy);
-  const app = createApp({ authService });
+  const authController = new AuthController(authService);
+  const app = createApp({ authController });
 
   return {
     app,

@@ -1,27 +1,28 @@
 import { Router } from 'express';
-import { createAuthController } from './auth/auth.controller';
-import { IAuthService } from './auth/auth.service';
+import { AuthController } from './auth/auth.controller';
 import { validate } from '../middleware/validate';
 import { asyncHandler } from '../middleware/async-handler';
 import { registerSchema, loginSchema } from './auth/auth.schema';
 
 export interface AppDependencies {
-  authService: IAuthService;
+  authController: AuthController;
 }
 
 export const createApiRouter = (dependencies: AppDependencies): Router => {
   const apiRouter = Router();
-
-  const { registerUser, loginUser } = createAuthController(
-    dependencies.authService
-  );
+  const { authController } = dependencies;
 
   apiRouter.post(
     '/auth/register',
     validate(registerSchema),
-    asyncHandler(registerUser)
+    asyncHandler(authController.registerUser)
   );
-  apiRouter.post('/auth/login', validate(loginSchema), asyncHandler(loginUser));
+
+  apiRouter.post(
+    '/auth/login',
+    validate(loginSchema),
+    asyncHandler(authController.loginUser)
+  );
 
   return apiRouter;
 };

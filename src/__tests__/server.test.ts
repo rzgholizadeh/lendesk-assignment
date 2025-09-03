@@ -1,10 +1,12 @@
 import request from 'supertest';
 import { createApp } from '../server';
+import { AuthController } from '../api/auth/auth.controller';
 import { IAuthService } from '../api/auth/auth.service';
 
 describe('Server - createApp', () => {
   let app: ReturnType<typeof createApp>;
   let mockAuthService: jest.Mocked<IAuthService>;
+  let authController: AuthController;
 
   beforeEach(() => {
     mockAuthService = {
@@ -12,7 +14,8 @@ describe('Server - createApp', () => {
       loginUser: jest.fn(),
     };
 
-    app = createApp({ authService: mockAuthService });
+    authController = new AuthController(mockAuthService);
+    app = createApp({ authController });
   });
 
   afterEach(() => {
@@ -46,11 +49,8 @@ describe('Server - createApp', () => {
         .expect(201);
 
       expect(response.body).toEqual({
-        ok: true,
-        user: {
-          userId: 'test-uuid-123',
-          username: 'testuser',
-        },
+        message: 'User registered successfully',
+        userId: 'test-uuid-123',
       });
 
       expect(mockAuthService.registerUser).toHaveBeenCalledWith({
@@ -97,11 +97,8 @@ describe('Server - createApp', () => {
         .expect(200);
 
       expect(response.body).toEqual({
-        ok: true,
-        user: {
-          userId: 'test-uuid-123',
-          username: 'testuser',
-        },
+        message: 'Login successful',
+        userId: 'test-uuid-123',
       });
 
       expect(mockAuthService.loginUser).toHaveBeenCalledWith({

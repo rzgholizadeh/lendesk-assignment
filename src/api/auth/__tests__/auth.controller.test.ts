@@ -1,17 +1,16 @@
-import { Request, Response, RequestHandler } from 'express';
-import { createAuthController } from '../auth.controller';
+import { Request, Response } from 'express';
+import { AuthController } from '../auth.controller';
 import { IAuthService } from '../auth.service';
 
 jest.mock('../../../common/logger/logger');
 
-describe('Auth Controller', () => {
+describe('AuthController', () => {
+  let authController: AuthController;
   let mockRequest: Partial<Request>;
   let mockResponse: Partial<Response>;
   let mockJson: jest.Mock;
   let mockStatus: jest.Mock;
   let mockAuthService: jest.Mocked<IAuthService>;
-  let registerUser: RequestHandler;
-  let loginUser: RequestHandler;
 
   beforeEach(() => {
     mockJson = jest.fn();
@@ -28,9 +27,7 @@ describe('Auth Controller', () => {
       loginUser: jest.fn(),
     };
 
-    const authController = createAuthController(mockAuthService);
-    registerUser = authController.registerUser;
-    loginUser = authController.loginUser;
+    authController = new AuthController(mockAuthService);
   });
 
   afterEach(() => {
@@ -45,10 +42,9 @@ describe('Auth Controller', () => {
         username: 'testuser',
       });
 
-      await registerUser(
+      await authController.registerUser(
         mockRequest as Request,
-        mockResponse as Response,
-        jest.fn()
+        mockResponse as Response
       );
 
       expect(mockAuthService.registerUser).toHaveBeenCalledWith({
@@ -57,11 +53,8 @@ describe('Auth Controller', () => {
       });
       expect(mockStatus).toHaveBeenCalledWith(201);
       expect(mockJson).toHaveBeenCalledWith({
-        ok: true,
-        user: {
-          userId: 'user_123',
-          username: 'testuser',
-        },
+        message: 'User registered successfully',
+        userId: 'user_123',
       });
     });
 
@@ -77,10 +70,9 @@ describe('Auth Controller', () => {
         username: 'testuser',
       });
 
-      await loginUser(
+      await authController.loginUser(
         mockRequest as Request,
-        mockResponse as Response,
-        jest.fn()
+        mockResponse as Response
       );
 
       expect(mockAuthService.loginUser).toHaveBeenCalledWith({
@@ -89,11 +81,8 @@ describe('Auth Controller', () => {
       });
       expect(mockStatus).toHaveBeenCalledWith(200);
       expect(mockJson).toHaveBeenCalledWith({
-        ok: true,
-        user: {
-          userId: 'user_456',
-          username: 'testuser',
-        },
+        message: 'Login successful',
+        userId: 'user_456',
       });
     });
 
@@ -109,19 +98,15 @@ describe('Auth Controller', () => {
         username: 'testuser',
       });
 
-      await registerUser(
+      await authController.registerUser(
         mockRequest as Request,
-        mockResponse as Response,
-        jest.fn()
+        mockResponse as Response
       );
 
       expect(mockJson).toHaveBeenCalledWith(
         expect.objectContaining({
-          ok: true,
-          user: expect.objectContaining({
-            userId: expect.any(String),
-            username: expect.any(String),
-          }),
+          message: expect.any(String),
+          userId: expect.any(String),
         })
       );
     });
@@ -133,19 +118,15 @@ describe('Auth Controller', () => {
         username: 'testuser',
       });
 
-      await loginUser(
+      await authController.loginUser(
         mockRequest as Request,
-        mockResponse as Response,
-        jest.fn()
+        mockResponse as Response
       );
 
       expect(mockJson).toHaveBeenCalledWith(
         expect.objectContaining({
-          ok: true,
-          user: expect.objectContaining({
-            userId: expect.any(String),
-            username: expect.any(String),
-          }),
+          message: expect.any(String),
+          userId: expect.any(String),
         })
       );
     });

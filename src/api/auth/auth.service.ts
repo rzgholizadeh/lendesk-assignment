@@ -6,14 +6,9 @@ import {
   UnauthorizedError,
 } from '../../common/error/http-errors';
 
-export interface AuthServiceResult {
-  userId: string;
-  username: string;
-}
-
 export interface IAuthService {
-  registerUser(userData: RegisterRequest): Promise<AuthServiceResult>;
-  loginUser(credentials: LoginRequest): Promise<AuthServiceResult>;
+  registerUser(userData: RegisterRequest): Promise<{ username: string }>;
+  loginUser(credentials: LoginRequest): Promise<{ username: string }>;
 }
 
 export class AuthService implements IAuthService {
@@ -24,7 +19,7 @@ export class AuthService implements IAuthService {
 
   public async registerUser(
     userData: RegisterRequest
-  ): Promise<{ userId: string; username: string }> {
+  ): Promise<{ username: string }> {
     const userExists = await this.authRepository.userExists(userData.username);
     if (userExists) {
       throw new ConflictError();
@@ -38,14 +33,13 @@ export class AuthService implements IAuthService {
     });
 
     return {
-      userId: user.id,
       username: user.username,
     };
   }
 
   public async loginUser(
     credentials: LoginRequest
-  ): Promise<AuthServiceResult> {
+  ): Promise<{ username: string }> {
     const user = await this.authRepository.findByUsername(credentials.username);
     if (!user) {
       throw new UnauthorizedError();
@@ -60,7 +54,6 @@ export class AuthService implements IAuthService {
     }
 
     return {
-      userId: user.id,
       username: user.username,
     };
   }

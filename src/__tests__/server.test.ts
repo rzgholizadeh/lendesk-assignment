@@ -36,7 +36,6 @@ describe('Server - createApp', () => {
   describe('POST /api/v1/auth/register', () => {
     it('should handle registration request', async () => {
       mockAuthService.registerUser.mockResolvedValue({
-        userId: 'test-uuid-123',
         username: 'testuser',
       });
 
@@ -50,7 +49,7 @@ describe('Server - createApp', () => {
 
       expect(response.body).toEqual({
         message: 'User registered successfully',
-        userId: 'test-uuid-123',
+        username: 'testuser',
       });
 
       expect(mockAuthService.registerUser).toHaveBeenCalledWith({
@@ -84,7 +83,6 @@ describe('Server - createApp', () => {
   describe('POST /api/v1/auth/login', () => {
     it('should handle login request', async () => {
       mockAuthService.loginUser.mockResolvedValue({
-        userId: 'test-uuid-123',
         username: 'testuser',
       });
 
@@ -98,7 +96,7 @@ describe('Server - createApp', () => {
 
       expect(response.body).toEqual({
         message: 'Login successful',
-        userId: 'test-uuid-123',
+        username: 'testuser',
       });
 
       expect(mockAuthService.loginUser).toHaveBeenCalledWith({
@@ -114,7 +112,6 @@ describe('Server - createApp', () => {
   describe('Express middleware', () => {
     it('should parse JSON bodies correctly', async () => {
       mockAuthService.registerUser.mockResolvedValue({
-        userId: 'test-uuid-123',
         username: 'testuser',
       });
 

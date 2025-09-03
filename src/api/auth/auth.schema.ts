@@ -26,12 +26,12 @@ export type LoginRequest = z.infer<typeof loginSchema>;
 
 export const registerResponseSchema = z.object({
   message: z.string(),
-  userId: z.string(),
+  username: z.string(),
 });
 
 export const loginResponseSchema = z.object({
   message: z.string(),
-  userId: z.string(),
+  username: z.string(),
 });
 
 export const errorResponseSchema = z.object({

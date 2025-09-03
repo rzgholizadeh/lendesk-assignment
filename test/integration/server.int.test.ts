@@ -46,8 +46,8 @@ describe('Server Integration Tests', () => {
           'message',
           'User registered successfully'
         );
-        expect(response.body).toHaveProperty('userId');
-        expect(typeof response.body.userId).toBe('string');
+        expect(response.body).toHaveProperty('username');
+        expect(typeof response.body.username).toBe('string');
 
         // Verify user was actually stored in Redis
         const storedUser = await testSetup.authRepository.findByUsername(
@@ -55,7 +55,7 @@ describe('Server Integration Tests', () => {
         );
         expect(storedUser).toBeTruthy();
         expect(storedUser!.username).toBe(userData.username);
-        expect(storedUser!.id).toBe(response.body.userId);
+        expect(storedUser!.username).toBe(response.body.username);
       });
 
       it('should reject duplicate username registration', async () => {
@@ -131,7 +131,7 @@ describe('Server Integration Tests', () => {
           .expect(200);
 
         expect(response.body).toHaveProperty('message', 'Login successful');
-        expect(response.body).toHaveProperty('userId', existingUser.id);
+        expect(response.body).toHaveProperty('username', existingUser.username);
       });
 
       it('should reject incorrect password', async () => {
@@ -181,7 +181,7 @@ describe('Server Integration Tests', () => {
           .send(userData)
           .expect(201);
 
-        const userId = registerResponse.body.userId;
+        const username = registerResponse.body.username;
 
         // Step 2: Login with same credentials
         const loginResponse = await request(app)
@@ -189,11 +189,13 @@ describe('Server Integration Tests', () => {
           .send(userData)
           .expect(200);
 
-        expect(loginResponse.body.userId).toBe(userId);
+        expect(loginResponse.body.username).toBe(username);
         expect(loginResponse.body.message).toBe('Login successful');
 
         // Step 3: Verify user persists in Redis
-        const storedUser = await testSetup.authRepository.findById(userId);
+        const storedUser = await testSetup.authRepository.findByUsername(
+          userData.username
+        );
         expect(storedUser).toBeTruthy();
         expect(storedUser!.username).toBe(userData.username);
       });
@@ -208,22 +210,23 @@ describe('Server Integration Tests', () => {
       };
 
       // Register user
-      const registerResponse = await request(app)
+      await request(app)
         .post('/api/v1/auth/register')
         .send(userData)
         .expect(201);
 
-      // Verify data exists in Redis directly
-      const userKey = `user:${registerResponse.body.userId}`;
-      const usernameKey = `username:${userData.username}`;
+      // Verify data exists in Redis by finding the user
+      const storedUser = await testSetup.authRepository.findByUsername(
+        userData.username
+      );
+      expect(storedUser).toBeTruthy();
+      expect(storedUser!.username).toBe(userData.username);
 
-      const userData_redis = await globalWithRedis.redisClient.hGetAll(userKey);
+      // Verify Redis mapping exists
+      const usernameKey = `username:${userData.username}`;
       const usernameMapping =
         await globalWithRedis.redisClient.get(usernameKey);
-
-      expect(userData_redis).toBeTruthy();
-      expect(userData_redis.username).toBe(userData.username);
-      expect(usernameMapping).toBe(registerResponse.body.userId);
+      expect(usernameMapping).toBeTruthy();
     });
 
     it('should handle Redis connection gracefully', async () => {
@@ -242,7 +245,7 @@ describe('Server Integration Tests', () => {
         'message',
         'User registered successfully'
       );
-      expect(response.body).toHaveProperty('userId');
+      expect(response.body).toHaveProperty('username');
     });
   });
 

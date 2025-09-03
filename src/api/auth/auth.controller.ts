@@ -35,7 +35,7 @@ export class AuthController {
 
     const response: RegisterResponse = {
       message: 'User registered successfully',
-      userId: user.userId,
+      username: user.username,
     };
 
     const validatedResponse = this.validateResponse(
@@ -54,7 +54,7 @@ export class AuthController {
 
     const response: LoginResponse = {
       message: 'Login successful',
-      userId: user.userId,
+      username: user.username,
     };
 
     const validatedResponse = this.validateResponse(

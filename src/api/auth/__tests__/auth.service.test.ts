@@ -64,7 +64,6 @@ describe('AuthService', () => {
       });
 
       expect(result).toEqual({
-        userId: 'test-uuid-123',
         username: 'testuser',
       });
     });
@@ -114,7 +113,6 @@ describe('AuthService', () => {
       );
 
       expect(result).toEqual({
-        userId: 'test-uuid-123',
         username: 'testuser',
       });
     });

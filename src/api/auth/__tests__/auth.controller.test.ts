@@ -38,7 +38,6 @@ describe('AuthController', () => {
     it('should successfully register a user with valid credentials', async () => {
       mockRequest.body = { username: 'testuser', password: 'testpassword123' };
       mockAuthService.registerUser.mockResolvedValue({
-        userId: 'user_123',
         username: 'testuser',
       });
 
@@ -54,7 +53,7 @@ describe('AuthController', () => {
       expect(mockStatus).toHaveBeenCalledWith(201);
       expect(mockJson).toHaveBeenCalledWith({
         message: 'User registered successfully',
-        userId: 'user_123',
+        username: 'testuser',
       });
     });
 
@@ -66,7 +65,6 @@ describe('AuthController', () => {
     it('should successfully login a user with valid credentials', async () => {
       mockRequest.body = { username: 'testuser', password: 'testpass' };
       mockAuthService.loginUser.mockResolvedValue({
-        userId: 'user_456',
         username: 'testuser',
       });
 
@@ -82,7 +80,7 @@ describe('AuthController', () => {
       expect(mockStatus).toHaveBeenCalledWith(200);
       expect(mockJson).toHaveBeenCalledWith({
         message: 'Login successful',
-        userId: 'user_456',
+        username: 'testuser',
       });
     });
 
@@ -94,7 +92,6 @@ describe('AuthController', () => {
     it('should return valid JSON for successful registration', async () => {
       mockRequest.body = { username: 'testuser', password: 'testpassword123' };
       mockAuthService.registerUser.mockResolvedValue({
-        userId: 'user_123',
         username: 'testuser',
       });
 
@@ -106,7 +103,7 @@ describe('AuthController', () => {
       expect(mockJson).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.any(String),
-          userId: expect.any(String),
+          username: expect.any(String),
         })
       );
     });
@@ -114,7 +111,6 @@ describe('AuthController', () => {
     it('should return valid JSON for successful login', async () => {
       mockRequest.body = { username: 'testuser', password: 'testpass' };
       mockAuthService.loginUser.mockResolvedValue({
-        userId: 'user_456',
         username: 'testuser',
       });
 
@@ -126,7 +122,7 @@ describe('AuthController', () => {
       expect(mockJson).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.any(String),
-          userId: expect.any(String),
+          username: expect.any(String),
         })
       );
     });

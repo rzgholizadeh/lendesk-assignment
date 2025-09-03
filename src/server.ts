@@ -1,5 +1,6 @@
 import express, { Application } from 'express';
 import helmet from 'helmet';
+import cors from 'cors';
 import { createApiRouter, AppDependencies } from './api';
 import { healthCheckHandler } from './middleware/health';
 import { jsonErrorHandler } from './middleware/jsonErrorHandler';
@@ -9,6 +10,15 @@ export const createApp = (dependencies: AppDependencies): Application => {
   const app = express();
 
   app.use(helmet());
+  app.use(
+    cors({
+      origin: process.env.NODE_ENV === 'production' ? false : true,
+      methods: ['GET', 'POST'],
+      allowedHeaders: ['Content-Type'],
+      credentials: false,
+      maxAge: 86400,
+    })
+  );
   app.use(express.json());
   app.use(jsonErrorHandler);
 

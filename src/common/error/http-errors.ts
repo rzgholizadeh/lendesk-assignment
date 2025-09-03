@@ -26,7 +26,7 @@ export class ResponseValidationError extends HttpError {
 }
 
 export class RequestValidationError extends HttpError {
-  constructor(message = 'Validation failed') {
+  constructor(message = 'Invalid request') {
     super(400, message);
     this.name = 'RequestValidationError';
   }

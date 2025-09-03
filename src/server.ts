@@ -3,7 +3,6 @@ import helmet from 'helmet';
 import cors from 'cors';
 import { createApiRouter, AppDependencies } from './api';
 import { healthCheckHandler } from './middleware/health';
-import { jsonErrorHandler } from './middleware/jsonErrorHandler';
 import { errorHandler } from './middleware/error';
 
 export const createApp = (dependencies: AppDependencies): Application => {
@@ -20,7 +19,6 @@ export const createApp = (dependencies: AppDependencies): Application => {
     })
   );
   app.use(express.json());
-  app.use(jsonErrorHandler);
 
   // Health check
   app.get('/health', healthCheckHandler);

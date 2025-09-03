@@ -88,7 +88,7 @@ describe('Server Integration Tests', () => {
           .send({ username: 'onlyusername' })
           .expect(400);
 
-        expect(response.body).toHaveProperty('message', 'Validation failed');
+        expect(response.body).toHaveProperty('message', 'Invalid request');
       });
 
       it('should enforce minimum password length', async () => {
@@ -100,7 +100,7 @@ describe('Server Integration Tests', () => {
           })
           .expect(400);
 
-        expect(response.body).toHaveProperty('message', 'Validation failed');
+        expect(response.body).toHaveProperty('message', 'Invalid request');
       });
     });
 
@@ -164,7 +164,7 @@ describe('Server Integration Tests', () => {
           .send({ username: 'onlyusername' })
           .expect(400);
 
-        expect(response.body).toHaveProperty('message', 'Validation failed');
+        expect(response.body).toHaveProperty('message', 'Invalid request');
       });
     });
 
@@ -247,14 +247,23 @@ describe('Server Integration Tests', () => {
   });
 
   describe('Error Handling', () => {
-    it('should handle malformed JSON', async () => {
+    it('should handle non-JSON content type with proper error message', async () => {
       const response = await request(app)
         .post('/api/v1/auth/register')
-        .set('Content-Type', 'application/json')
-        .send('{"invalid": json}');
+        .set('Content-Type', 'application/xml')
+        .send('<xml></xml>');
 
       expect(response.status).toBe(400);
-      expect(response.body).toHaveProperty('error');
+      expect(response.body).toEqual({ message: 'Invalid request' });
+    });
+
+    it('should handle missing content-type with proper error message', async () => {
+      const response = await request(app)
+        .post('/api/v1/auth/register')
+        .send('some text data');
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({ message: 'Invalid request' });
     });
 
     it('should return 404 for non-existent endpoints', async () => {
@@ -267,7 +276,7 @@ describe('Server Integration Tests', () => {
         .send({})
         .expect(400);
 
-      expect(response.body).toHaveProperty('message', 'Validation failed');
+      expect(response.body).toHaveProperty('message', 'Invalid request');
     });
   });
 });

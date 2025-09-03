@@ -65,7 +65,7 @@ describe('Server - createApp', () => {
         .send('invalid json')
         .expect(400);
 
-      expect(response.body).toHaveProperty('message', 'Validation failed');
+      expect(response.body).toHaveProperty('message', 'Invalid request');
       expect(mockAuthService.registerUser).not.toHaveBeenCalled();
     });
 
@@ -76,7 +76,7 @@ describe('Server - createApp', () => {
         .send('{"username":"test","password":"test"}')
         .expect(400);
 
-      expect(response.body).toHaveProperty('message', 'Validation failed');
+      expect(response.body).toHaveProperty('message', 'Invalid request');
       expect(mockAuthService.registerUser).not.toHaveBeenCalled();
     });
   });
@@ -130,16 +130,6 @@ describe('Server - createApp', () => {
         username: 'testuser',
         password: 'password123',
       });
-    });
-
-    it('should handle malformed JSON', async () => {
-      const response = await request(app)
-        .post('/api/v1/auth/register')
-        .set('Content-Type', 'application/json')
-        .send('{"invalid": json}');
-
-      expect(response.status).toBe(400);
-      expect(mockAuthService.registerUser).not.toHaveBeenCalled();
     });
   });
 

@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import { ZodError, z } from 'zod';
+import { ZodError } from 'zod';
 import { HttpError } from '../common/error/http-errors';
+import { logger } from '../common/logger/logger';
+import { ErrorResponse } from '../api/auth/auth.schema';
 
 export function errorHandler(
   err: unknown,
@@ -9,16 +11,16 @@ export function errorHandler(
   _next: NextFunction
 ) {
   if (err instanceof ZodError) {
-    return res.status(400).json({
-      message: 'Validation failed',
-      errors: z.treeifyError(err),
-    });
+    const response: ErrorResponse = { message: 'Validation failed' };
+    return res.status(400).json(response);
   }
 
   if (err instanceof HttpError) {
-    return res.status(err.status).json({ message: err.message });
+    const response: ErrorResponse = { message: err.message };
+    return res.status(err.status).json(response);
   }
 
-  console.error(err);
-  return res.status(500).json({ message: 'Internal Server Error' });
+  logger.error('Unhandled error', { err });
+  const response: ErrorResponse = { message: 'Internal Server Error' };
+  return res.status(500).json(response);
 }

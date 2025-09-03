@@ -35,7 +35,7 @@ export const loginResponseSchema = z.object({
 });
 
 export const errorResponseSchema = z.object({
-  error: z.string(),
+  message: z.string(),
 });
 
 export type RegisterResponse = z.infer<typeof registerResponseSchema>;

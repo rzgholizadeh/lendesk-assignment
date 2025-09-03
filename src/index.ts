@@ -40,10 +40,7 @@ async function bootstrap(): Promise<ServerWithRedisClient> {
 
   // Handle server errors
   server.on('error', (err) => {
-    logger.error('HTTP server error:', {
-      error: err.message,
-      stack: err.stack,
-    });
+    logger.error('HTTP server error:', { err });
     process.exit(1);
   });
 
@@ -56,10 +53,7 @@ async function bootstrap(): Promise<ServerWithRedisClient> {
 (async () => {
   // Guard rails for unhandled failures
   process.on('uncaughtException', (err) => {
-    logger.error('Uncaught exception:', {
-      error: err.message,
-      stack: err.stack,
-    });
+    logger.error('Uncaught exception:', { err });
     process.exit(1);
   });
   process.on('unhandledRejection', (reason) => {

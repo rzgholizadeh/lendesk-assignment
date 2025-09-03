@@ -91,7 +91,6 @@ describe('Server Integration Tests', () => {
           .expect(400);
 
         expect(response.body).toHaveProperty('message', 'Validation failed');
-        expect(response.body).toHaveProperty('errors');
       });
 
       it('should enforce minimum password length', async () => {
@@ -104,7 +103,6 @@ describe('Server Integration Tests', () => {
           .expect(400);
 
         expect(response.body).toHaveProperty('message', 'Validation failed');
-        expect(response.body).toHaveProperty('errors');
       });
     });
 
@@ -174,7 +172,6 @@ describe('Server Integration Tests', () => {
           .expect(400);
 
         expect(response.body).toHaveProperty('message', 'Validation failed');
-        expect(response.body).toHaveProperty('errors');
       });
     });
 
@@ -275,7 +272,6 @@ describe('Server Integration Tests', () => {
         .expect(400);
 
       expect(response.body).toHaveProperty('message', 'Validation failed');
-      expect(response.body).toHaveProperty('errors');
     });
   });
 });

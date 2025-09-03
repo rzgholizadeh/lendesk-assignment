@@ -66,7 +66,6 @@ describe('Server - createApp', () => {
         .expect(400);
 
       expect(response.body).toHaveProperty('message', 'Validation failed');
-      expect(response.body).toHaveProperty('errors');
       expect(mockAuthService.registerUser).not.toHaveBeenCalled();
     });
 
@@ -78,7 +77,6 @@ describe('Server - createApp', () => {
         .expect(400);
 
       expect(response.body).toHaveProperty('message', 'Validation failed');
-      expect(response.body).toHaveProperty('errors');
       expect(mockAuthService.registerUser).not.toHaveBeenCalled();
     });
   });

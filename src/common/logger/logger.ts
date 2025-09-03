@@ -1,58 +1,26 @@
-export enum LogLevel {
-  DEBUG = 'DEBUG',
-  INFO = 'INFO',
-  WARN = 'WARN',
-  ERROR = 'ERROR',
-}
-
-export interface LogEntry {
-  level: LogLevel;
-  message: string;
-  timestamp: string;
-  metadata?: Record<string, unknown>;
-}
+import pino from 'pino';
+import { config } from '../../config';
 
 class Logger {
-  private formatLogEntry(
-    level: LogLevel,
-    message: string,
-    metadata?: Record<string, unknown>
-  ): LogEntry {
-    return {
-      level,
-      message,
-      timestamp: new Date().toISOString(),
-      metadata,
-    };
-  }
-
-  private logToConsole(entry: LogEntry): void {
-    const logMessage = `[${entry.timestamp}] ${entry.level}: ${entry.message}`;
-    const fullMessage = entry.metadata
-      ? `${logMessage} ${JSON.stringify(entry.metadata)}`
-      : logMessage;
-
-    console.log(fullMessage);
-  }
+  private pinoLogger = pino({
+    level: config.logLevel,
+    serializers: pino.stdSerializers,
+  });
 
   debug(message: string, metadata?: Record<string, unknown>): void {
-    const entry = this.formatLogEntry(LogLevel.DEBUG, message, metadata);
-    this.logToConsole(entry);
+    this.pinoLogger.debug(metadata, message);
   }
 
   info(message: string, metadata?: Record<string, unknown>): void {
-    const entry = this.formatLogEntry(LogLevel.INFO, message, metadata);
-    this.logToConsole(entry);
+    this.pinoLogger.info(metadata, message);
   }
 
   warn(message: string, metadata?: Record<string, unknown>): void {
-    const entry = this.formatLogEntry(LogLevel.WARN, message, metadata);
-    this.logToConsole(entry);
+    this.pinoLogger.warn(metadata, message);
   }
 
   error(message: string, metadata?: Record<string, unknown>): void {
-    const entry = this.formatLogEntry(LogLevel.ERROR, message, metadata);
-    this.logToConsole(entry);
+    this.pinoLogger.error(metadata, message);
   }
 }
 

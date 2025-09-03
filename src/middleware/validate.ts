@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import { ZodType, ZodError, z } from 'zod';
+import { ZodType, ZodError } from 'zod';
 import { logger } from '../common/logger/logger';
 
 const SENSITIVE_FIELDS = [
@@ -39,8 +39,8 @@ export const validate =
       return next();
     }
 
-    logger.error('Validation failed', {
-      error: z.treeifyError(result.error),
+    logger.warn('Validation failed', {
+      err: result.error,
       originalBody: sanitizeBody(req.body),
     });
     return next(result.error as ZodError);

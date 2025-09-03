@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { config } from '../config';
+import { config } from './config';
 
 export const healthCheckHandler = (req: Request, res: Response): void => {
   res.status(200).json({

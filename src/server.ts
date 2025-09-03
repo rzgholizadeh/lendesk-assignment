@@ -2,8 +2,8 @@ import express, { Application } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import { createApiRouter, AppDependencies } from './api';
-import { healthCheckHandler } from './middleware/health';
-import { errorHandler } from './middleware/error';
+import { healthCheckHandler } from './utils';
+import { errorHandler } from './middleware/error-handler.middleware';
 
 export const createApp = (dependencies: AppDependencies): Application => {
   const app = express();

@@ -24,7 +24,7 @@ const sanitizeBody = (body: any): any => {
   return sanitized;
 };
 
-export const validate =
+export const requestValidationHandler =
   (schema: ZodType) => (req: Request, _res: Response, next: NextFunction) => {
     logger.info('Validating request', {
       path: req.path,

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { AuthController } from './auth/auth.controller';
-import { validate } from '../middleware/validate';
-import { asyncHandler } from '../middleware/async-handler';
+import { requestValidationHandler } from '../middleware/request-validator.middleware';
+import { asyncHandler } from '../middleware/async-handler.middleware';
 import { registerSchema, loginSchema } from './auth/auth.schema';
 
 export interface AppDependencies {
@@ -14,13 +14,13 @@ export const createApiRouter = (dependencies: AppDependencies): Router => {
 
   apiRouter.post(
     '/auth/register',
-    validate(registerSchema),
+    requestValidationHandler(registerSchema),
     asyncHandler(authController.registerUser)
   );
 
   apiRouter.post(
     '/auth/login',
-    validate(loginSchema),
+    requestValidationHandler(loginSchema),
     asyncHandler(authController.loginUser)
   );
 

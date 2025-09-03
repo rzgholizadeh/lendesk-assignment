@@ -30,9 +30,9 @@ async function bootstrap(): Promise<ServerWithRedisClient> {
 
   const app = createApp({ authController });
 
-  const server = app.listen(config.port, '0.0.0.0', () => {
+  const server = app.listen(config.port, config.host, () => {
     logger.info(
-      `HTTP server started on port ${config.port} (env: ${config.environment})`
+      `HTTP server started on ${config.host}:${config.port} (env: ${config.environment})`
     );
   }) as ServerWithRedisClient;
 

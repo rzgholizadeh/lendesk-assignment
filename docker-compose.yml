@@ -22,9 +22,10 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
+    env_file:
+      - .env
     environment:
-      - NODE_ENV=development
-      - REDIS_URL=redis://redis:6379
+      REDIS_URL: redis://redis:6379
     command: npx nodemon --exec "npx ts-node src/index.ts" --watch src --ext ts,js,json --legacy-watch --polling-interval 1000 # NOTE: polling is a temporary workaround for auto-refresh
     depends_on:
       redis:

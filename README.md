@@ -344,18 +344,14 @@ Create a `.env` file based on `.env.template`:
 ```bash
 # Server Configuration
 NODE_ENV=development
+HOST=0.0.0.0
 PORT=3000
 
 # Redis Configuration
 REDIS_URL=redis://localhost:6379
-REDIS_HOST=localhost
-REDIS_PORT=6379
 
-# Security Configuration
-BCRYPT_SALT_ROUNDS=10
-
-# Logging Configuration
-LOG_LEVEL=debug
+# Authentication Configuration
+SALT_ROUNDS=12
 ```
 
 ### Configuration Management

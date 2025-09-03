@@ -27,10 +27,10 @@ export class AuthService implements IAuthService {
 
     const passwordHash = await this.passwordStrategy.hash(userData.password);
 
-    const user = await this.authRepository.createUser({
-      username: userData.username,
-      passwordHash,
-    });
+    const user = await this.authRepository.createUser(
+      userData.username,
+      passwordHash
+    );
 
     return {
       username: user.username,

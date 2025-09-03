@@ -72,10 +72,10 @@ export const createTestUser = async (
   const passwordStrategy = new BcryptStrategy(config.saltRounds);
   const passwordHash = await passwordStrategy.hash(userToCreate.password);
 
-  const user = await authRepository.createUser({
-    username: userToCreate.username,
-    passwordHash,
-  });
+  const user = await authRepository.createUser(
+    userToCreate.username,
+    passwordHash
+  );
 
   return {
     ...user,

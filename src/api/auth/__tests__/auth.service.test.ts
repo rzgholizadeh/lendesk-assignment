@@ -58,10 +58,10 @@ describe('AuthService', () => {
 
       expect(mockAuthRepository.userExists).toHaveBeenCalledWith('testuser');
       expect(mockPasswordStrategy.hash).toHaveBeenCalledWith('password123');
-      expect(mockAuthRepository.createUser).toHaveBeenCalledWith({
-        username: 'testuser',
-        passwordHash: 'hashedpassword123',
-      });
+      expect(mockAuthRepository.createUser).toHaveBeenCalledWith(
+        'testuser',
+        'hashedpassword123'
+      );
 
       expect(result).toEqual({
         username: 'testuser',

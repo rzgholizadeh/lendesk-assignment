@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { RedisClient } from '../../infra/redis/client';
 
 export interface IAuthRepository {
-  createUser(user: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User>;
+  createUser(username: string, passwordHash: string): Promise<User>;
   findByUsername(username: string): Promise<User | null>;
   findById(id: string): Promise<User | null>;
   userExists(username: string): Promise<boolean>;
@@ -56,15 +56,16 @@ export class AuthRepository implements IAuthRepository {
   }
 
   public async createUser(
-    userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'> // NOTE: the input here should be pure User model. Not a complex type.
+    username: string,
+    passwordHash: string
   ): Promise<User> {
     const id = uuidv4();
     const now = new Date();
 
     const user: User = {
       id,
-      username: userData.username,
-      passwordHash: userData.passwordHash,
+      username,
+      passwordHash,
       createdAt: now,
       updatedAt: now,
     };
@@ -74,7 +75,7 @@ export class AuthRepository implements IAuthRepository {
     await this.redisClient
       .multi()
       .hSet(this.getUserKey(id), this.serializeForRedis(redisUser))
-      .set(this.getUsernameIndexKey(userData.username), id)
+      .set(this.getUsernameIndexKey(username), id)
       .exec();
 
     return user;

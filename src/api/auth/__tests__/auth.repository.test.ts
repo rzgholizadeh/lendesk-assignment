@@ -51,7 +51,10 @@ describe('AuthRepository', () => {
         passwordHash: 'hashedpassword123',
       };
 
-      const result = await authRepository.createUser(userData);
+      const result = await authRepository.createUser(
+        userData.username,
+        userData.passwordHash
+      );
 
       expect(mockRedisClient.multi).toHaveBeenCalled();
       expect(mockMulti.hSet).toHaveBeenCalledWith('user:test-uuid-123', {
@@ -84,9 +87,9 @@ describe('AuthRepository', () => {
 
       mockMulti.exec.mockRejectedValue(new Error('Redis connection failed'));
 
-      await expect(authRepository.createUser(userData)).rejects.toThrow(
-        'Redis connection failed'
-      );
+      await expect(
+        authRepository.createUser(userData.username, userData.passwordHash)
+      ).rejects.toThrow('Redis connection failed');
     });
   });
 

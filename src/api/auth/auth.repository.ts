@@ -55,23 +55,11 @@ export class AuthRepository implements IAuthRepository {
       return null;
     }
 
-    return this.findById(userId); // is it an anti-pattern to use another repository public function in a repository public function?
+    return this._getUserById(userId);
   }
 
   public async findById(id: string): Promise<User | null> {
-    const storedUser = await this.redisClient.hGetAll(this.getUserKey(id));
-
-    if (!storedUser || Object.keys(storedUser).length === 0) {
-      return null;
-    }
-
-    return {
-      id: storedUser.id,
-      username: storedUser.username,
-      passwordHash: storedUser.passwordHash,
-      createdAt: new Date(storedUser.createdAt),
-      updatedAt: new Date(storedUser.updatedAt),
-    };
+    return this._getUserById(id);
   }
 
   public async userExists(username: string): Promise<boolean> {
@@ -87,5 +75,21 @@ export class AuthRepository implements IAuthRepository {
 
   private getUsernameIndexKey(username: string): string {
     return `${this.USERNAME_INDEX_PREFIX}${username}`;
+  }
+
+  private async _getUserById(id: string): Promise<User | null> {
+    const storedUser = await this.redisClient.hGetAll(this.getUserKey(id));
+
+    if (!storedUser || Object.keys(storedUser).length === 0) {
+      return null;
+    }
+
+    return {
+      id: storedUser.id,
+      username: storedUser.username,
+      passwordHash: storedUser.passwordHash,
+      createdAt: new Date(storedUser.createdAt),
+      updatedAt: new Date(storedUser.updatedAt),
+    };
   }
 }
